@@ -1,0 +1,127 @@
+{{define "content"}}
+{{template "project_header" .}}
+{{$p := .Data.P}}
+{{$snap := .Data.Snap}}
+
+<div class="card">
+  <div class="card-head">
+    <h2>Kanban board</h2>
+    <span class="hint">Drag cards between columns, or use the move menu on each card</span>
+  </div>
+
+  <div class="kanban">
+    {{$tasks := $snap.Tasks}}
+    {{range $status := taskStatuses}}
+    <div class="kanban-col" data-status="{{$status}}">
+      <div class="kanban-col-head">
+        <span>{{taskStatusName $status}}</span>
+        <span class="count">{{$n := 0}}{{range $tasks}}{{if eq .Status $status}}{{$n = add $n 1}}{{end}}{{end}}{{$n}}</span>
+      </div>
+      {{range $tasks}}
+      {{if eq .Status $status}}
+      <div class="kcard" draggable="true" data-task-id="{{.ID}}">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span class="ref">{{.Ref}}</span>
+          <span class="prio prio-{{.Priority}}" title="{{.Priority}} priority"></span>
+        </div>
+        <div class="kcard-title">{{.Title}}</div>
+        {{if .Notes}}<div class="small muted" style="margin-bottom:6px">{{truncate 90 .Notes}}</div>{{end}}
+        <div class="kcard-meta">
+          {{if .Assignee}}<span>{{.Assignee}}</span>{{end}}
+          {{if .DueDate}}<span {{if .Overdue}}class="overdue" title="Overdue"{{end}}>{{date .DueDate}}</span>{{end}}
+        </div>
+        <details class="disclosure" style="margin-top:6px">
+          <summary style="font-size:12px;padding:2px 6px">Edit</summary>
+          <div class="disclosure-body" style="padding:10px">
+            <form method="post" action="/tasks/{{.ID}}/update">
+              <input type="hidden" name="back" value="/projects/{{$p.ID}}/board">
+              <div class="field"><label>Title</label><input type="text" name="title" value="{{.Title}}" required></div>
+              <div class="field"><label>Notes</label><textarea name="notes" rows="2">{{.Notes}}</textarea></div>
+              <div class="form-row">
+                <div class="field"><label>Priority</label>
+                  <select name="priority">
+                    <option value="high" {{if eq .Priority "high"}}selected{{end}}>High</option>
+                    <option value="medium" {{if eq .Priority "medium"}}selected{{end}}>Medium</option>
+                    <option value="low" {{if eq .Priority "low"}}selected{{end}}>Low</option>
+                  </select>
+                </div>
+                <div class="field"><label>Assignee</label><input type="text" name="assignee" value="{{.Assignee}}"></div>
+                <div class="field"><label>Due</label><input type="date" name="due_date" value="{{.DueDate}}"></div>
+              </div>
+              <div class="field"><label>Milestone</label>
+                <select name="milestone_id">
+                  <option value="0">—</option>
+                  {{$msid := .MilestoneID}}
+                  {{range $snap.Milestones}}<option value="{{.ID}}" {{if and $msid.Valid (eq $msid.Int64 .ID)}}selected{{end}}>{{.Name}}</option>{{end}}
+                </select>
+              </div>
+              <div class="form-actions">
+                <button class="btn btn-sm btn-primary" type="submit">Save</button>
+              </div>
+            </form>
+            <form method="post" action="/tasks/{{.ID}}/status" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+              <input type="hidden" name="back" value="/projects/{{$p.ID}}/board">
+              {{$cur := .Status}}
+              {{range $st := taskStatuses}}{{if ne $st $cur}}
+              <button class="btn btn-sm" name="status" value="{{$st}}" type="submit">→ {{taskStatusName $st}}</button>
+              {{end}}{{end}}
+            </form>
+            <form method="post" action="/tasks/{{.ID}}/delete" style="margin-top:8px">
+              <input type="hidden" name="back" value="/projects/{{$p.ID}}/board">
+              <button class="btn btn-sm btn-danger" type="submit">Delete task</button>
+            </form>
+          </div>
+        </details>
+      </div>
+      {{end}}
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+
+  <details class="disclosure" {{if not $snap.Tasks}}open{{end}}>
+    <summary>Add a task</summary>
+    <div class="disclosure-body">
+      <form method="post" action="/projects/{{$p.ID}}/tasks">
+        <input type="hidden" name="back" value="/projects/{{$p.ID}}/board">
+        <div class="form-row">
+          <div class="field" style="grid-column:span 2">
+            <label for="t_title">Task</label>
+            <input type="text" id="t_title" name="title" required placeholder="Small enough to finish in days, not weeks">
+          </div>
+          <div class="field">
+            <label for="t_prio">Priority</label>
+            <select id="t_prio" name="priority">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="t_assignee">Assignee</label>
+            <input type="text" id="t_assignee" name="assignee">
+          </div>
+          <div class="field">
+            <label for="t_due">Due date</label>
+            <input type="date" id="t_due" name="due_date">
+          </div>
+          <div class="field">
+            <label for="t_ms">Milestone</label>
+            <select id="t_ms" name="milestone_id">
+              <option value="0">—</option>
+              {{range $snap.Milestones}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="t_notes">Notes (optional)</label>
+          <textarea id="t_notes" name="notes" rows="2"></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">Add task</button>
+      </form>
+    </div>
+  </details>
+</div>
+{{end}}

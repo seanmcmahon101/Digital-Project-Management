@@ -1,0 +1,37 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1>Lessons learned</h1>
+    <p class="sub">The portfolio's institutional memory — read this before starting anything new.</p>
+  </div>
+</div>
+
+<div class="card">
+  {{if .Data.Lessons}}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Category</th><th>Lesson</th><th>Recommendation</th><th>Project</th></tr></thead>
+    <tbody>
+      {{range .Data.Lessons}}
+      <tr>
+        <td style="white-space:nowrap">
+          {{if eq .Category "went_well"}}<span class="badge badge-green">Went well</span>
+          {{else if eq .Category "went_wrong"}}<span class="badge badge-red">Went wrong</span>
+          {{else}}<span class="badge badge-amber">Do differently</span>{{end}}
+        </td>
+        <td style="max-width:340px">{{.Lesson}}</td>
+        <td class="small" style="max-width:300px">{{.Recommendation}}</td>
+        <td><a href="/projects/{{.ProjectID}}/close">{{.ProjectCode}}</a></td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}
+  <div class="empty">
+    <p class="empty-title">No lessons recorded yet</p>
+    <p>Lessons are captured on each project's Close tab — ideally as they happen, not just at the end.</p>
+  </div>
+  {{end}}
+</div>
+{{end}}

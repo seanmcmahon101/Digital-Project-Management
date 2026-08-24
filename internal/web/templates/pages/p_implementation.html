@@ -1,0 +1,128 @@
+{{define "content"}}
+{{template "project_header" .}}
+{{$p := .Data.P}}
+{{$snap := .Data.Snap}}
+
+{{$total := len $snap.Readiness}}
+{{$done := 0}}{{range $snap.Readiness}}{{if .Done}}{{$done = add $done 1}}{{end}}{{end}}
+
+<div class="grid grid-main-side">
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <h2>Go-live readiness</h2>
+        <span class="hint">{{if $total}}{{$done}} of {{$total}} complete{{else}}Go-live fails on the human side more often than the technical side{{end}}</span>
+      </div>
+      {{if $total}}
+      <div class="progress" style="margin-bottom:14px">
+        <span class="{{if eq $done $total}}p-green{{end}}" style="width:{{printf "%.0f" (pctOf $done $total)}}%"></span>
+      </div>
+      <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th></th><th>Item</th><th>Category</th><th>Owner</th><th></th></tr></thead>
+        <tbody>
+          {{range $snap.Readiness}}
+          <tr>
+            <td style="width:36px">
+              <form method="post" action="/readiness/{{.ID}}/toggle">
+                <input type="hidden" name="back" value="/projects/{{$p.ID}}/implementation">
+                <input type="hidden" name="done" value="{{if .Done}}0{{else}}1{{end}}">
+                <button class="btn btn-sm" type="submit" title="{{if .Done}}Mark not done{{else}}Mark done{{end}}">{{if .Done}}✓{{else}}○{{end}}</button>
+              </form>
+            </td>
+            <td {{if .Done}}style="color:var(--ink-3)"{{end}}>{{.Item}}</td>
+            <td><span class="badge {{if eq .Category "training"}}badge-rose{{else}}badge-grey{{end}}">{{.CategoryName}}</span></td>
+            <td class="small">{{.Owner}}</td>
+            <td class="actions">
+              <form method="post" action="/readiness/{{.ID}}/delete">
+                <input type="hidden" name="back" value="/projects/{{$p.ID}}/implementation">
+                <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+      </div>
+      {{else}}
+      <div class="empty">
+        <p class="empty-title">No readiness checklist yet</p>
+        <p>Every item on the standard checklist exists because skipping it has burned a project before:
+        training, communications, support, data migration, access, and a rollback plan.</p>
+        <form method="post" action="/projects/{{$p.ID}}/readiness/seed" style="margin-top:10px">
+          <input type="hidden" name="back" value="/projects/{{$p.ID}}/implementation">
+          <button class="btn btn-primary" type="submit">Add the standard checklist</button>
+        </form>
+      </div>
+      {{end}}
+      <details class="disclosure">
+        <summary>Add an item</summary>
+        <div class="disclosure-body">
+          <form method="post" action="/projects/{{$p.ID}}/readiness">
+            <input type="hidden" name="back" value="/projects/{{$p.ID}}/implementation">
+            <div class="form-row">
+              <div class="field" style="grid-column:span 2">
+                <label for="rd_item">Item</label>
+                <input type="text" id="rd_item" name="item" required>
+              </div>
+              <div class="field">
+                <label for="rd_cat">Category</label>
+                <select id="rd_cat" name="category">
+                  <option value="training">Training</option>
+                  <option value="communications">Communications</option>
+                  <option value="support">Support</option>
+                  <option value="data">Data</option>
+                  <option value="technical" selected>Technical</option>
+                  <option value="rollback">Rollback plan</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="rd_owner">Owner</label>
+                <input type="text" id="rd_owner" name="owner">
+              </div>
+            </div>
+            <button class="btn btn-primary" type="submit">Add item</button>
+          </form>
+        </div>
+      </details>
+      {{if $total}}
+      <form method="post" action="/projects/{{$p.ID}}/readiness/seed" style="margin-top:8px">
+        <input type="hidden" name="back" value="/projects/{{$p.ID}}/implementation">
+        <button class="btn btn-sm btn-ghost" type="submit">Add any missing standard items</button>
+      </form>
+      {{end}}
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Go-live date</h2></div>
+      <form method="post" action="/projects/{{$p.ID}}/update">
+        <input type="hidden" name="back" value="/projects/{{$p.ID}}/implementation">
+        <div class="field">
+          <input type="date" name="go_live" value="{{$p.GoLive}}">
+          <p class="help">Training and communications are planned backwards from this date.</p>
+        </div>
+        <button class="btn btn-primary btn-sm" type="submit">Save</button>
+      </form>
+      {{if $p.GoLive}}
+      {{$d := daysUntil $p.GoLive}}
+      <p class="small" style="margin-bottom:0;margin-top:10px">
+        {{if gt $d 0}}<b>{{$d}} days</b> to go-live.
+        {{else if eq $d 0}}<b>Go-live is today.</b>
+        {{else}}Went live <b>{{sub 0 $d}} days ago</b>.{{end}}
+      </p>
+      {{end}}
+    </div>
+
+    <div class="coach">
+      <div class="coach-head">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M8 5v3.5l2.4 1.5"/></svg>
+        Adoption is the benefit
+      </div>
+      <p class="small" style="margin:0 0 8px;color:var(--ink-2)">A delivered system that people don't use delivers nothing. If people are not trained and supported, they will quietly keep using the old process — and the benefits never appear.</p>
+      <p class="small" style="margin:0;color:var(--ink-2)">Consider tracking adoption as a measurable benefit (e.g. “% of transactions through the new system”) on the <a href="/projects/{{$p.ID}}/benefits">Benefits tab</a>.</p>
+    </div>
+  </div>
+</div>
+{{end}}

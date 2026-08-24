@@ -1,0 +1,88 @@
+{{define "content"}}
+{{template "project_header" .}}
+{{$p := .Data.P}}
+{{$snap := .Data.Snap}}
+
+<div class="card">
+  <div class="card-head">
+    <h2>Decision log</h2>
+    <span class="hint">Six months from now, nobody remembers why. The log does.</span>
+  </div>
+  {{if $snap.Decisions}}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Ref</th><th>Decision needed</th><th>Outcome</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {{range $snap.Decisions}}
+      <tr>
+        <td><span class="ref">{{.Ref}}</span></td>
+        <td>{{.Title}}{{if .Context}}<div class="small muted">{{truncate 140 .Context}}</div>{{end}}</td>
+        <td style="max-width:300px">
+          {{if .Outcome}}{{.Outcome}}
+            <div class="small muted">{{if .DecidedBy}}{{.DecidedBy}} · {{end}}{{date .DecidedAt}}</div>
+          {{else}}<span class="muted small">—</span>{{end}}
+        </td>
+        <td>
+          {{if eq .Status "pending"}}<span class="badge badge-amber">Pending</span>
+          {{else}}<span class="badge badge-green">Decided</span>{{end}}
+        </td>
+        <td class="actions">
+          <details class="disclosure" style="margin:0">
+            <summary style="padding:3px 8px;font-size:12px">{{if eq .Status "pending"}}Record{{else}}Edit{{end}}</summary>
+            <div class="disclosure-body" style="text-align:left;min-width:320px">
+              {{if eq .Status "pending"}}
+              <form method="post" action="/decisions/{{.ID}}/record">
+                <input type="hidden" name="back" value="/projects/{{$p.ID}}/decisions">
+                <div class="field"><label>What was decided?</label><textarea name="outcome" rows="2" required></textarea></div>
+                <div class="field"><label>Decided by</label><input type="text" name="decided_by"></div>
+                <div class="form-actions"><button class="btn btn-sm btn-primary" type="submit">Record decision</button></div>
+              </form>
+              {{else}}
+              <form method="post" action="/decisions/{{.ID}}/update">
+                <input type="hidden" name="back" value="/projects/{{$p.ID}}/decisions">
+                <div class="field"><label>Title</label><input type="text" name="title" value="{{.Title}}" required></div>
+                <div class="field"><label>Context</label><textarea name="context" rows="2">{{.Context}}</textarea></div>
+                <div class="field"><label>Outcome</label><textarea name="outcome" rows="2">{{.Outcome}}</textarea></div>
+                <div class="field"><label>Decided by</label><input type="text" name="decided_by" value="{{.DecidedBy}}"></div>
+                <div class="form-actions"><button class="btn btn-sm btn-primary" type="submit">Save</button></div>
+              </form>
+              {{end}}
+              <form method="post" action="/decisions/{{.ID}}/delete" style="margin-top:6px">
+                <input type="hidden" name="back" value="/projects/{{$p.ID}}/decisions">
+                <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+              </form>
+            </div>
+          </details>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}
+  <div class="empty">
+    <p class="empty-title">No decisions logged</p>
+    <p>Log a decision whenever there was a real choice: tool selection, pilot area, what to descope.
+    Capture the context too — the reasoning is what future-you will need.</p>
+  </div>
+  {{end}}
+  <details class="disclosure" {{if not $snap.Decisions}}open{{end}}>
+    <summary>Log a decision</summary>
+    <div class="disclosure-body">
+      <form method="post" action="/projects/{{$p.ID}}/decisions">
+        <input type="hidden" name="back" value="/projects/{{$p.ID}}/decisions">
+        <div class="field">
+          <label for="dc_title">What needs deciding?</label>
+          <input type="text" id="dc_title" name="title" required placeholder="e.g. Rugged tablets vs repurposed office iPads">
+        </div>
+        <div class="field">
+          <label for="dc_context">Context and options</label>
+          <textarea id="dc_context" name="context" rows="3" placeholder="The options considered and what matters in choosing between them"></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">Log decision</button>
+        <p class="help" style="margin-top:8px">It starts as <b>pending</b> — record the outcome once it's made.</p>
+      </form>
+    </div>
+  </details>
+</div>
+{{end}}

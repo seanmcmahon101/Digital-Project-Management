@@ -1,0 +1,133 @@
+{{define "content"}}
+{{template "project_header" .}}
+{{$p := .Data.P}}
+{{$snap := .Data.Snap}}
+
+<div class="grid grid-main-side">
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <h2>Lessons learned</h2>
+        <span class="hint">Ten minutes of honest reflection makes the next project cheaper and calmer</span>
+      </div>
+      {{if $snap.Lessons}}
+      <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Category</th><th>Lesson</th><th>Recommendation</th><th></th></tr></thead>
+        <tbody>
+          {{range $snap.Lessons}}
+          <tr>
+            <td style="white-space:nowrap">
+              {{if eq .Category "went_well"}}<span class="badge badge-green">Went well</span>
+              {{else if eq .Category "went_wrong"}}<span class="badge badge-red">Went wrong</span>
+              {{else}}<span class="badge badge-amber">Do differently</span>{{end}}
+            </td>
+            <td>{{.Lesson}}</td>
+            <td class="small">{{.Recommendation}}</td>
+            <td class="actions">
+              <form method="post" action="/lessons/{{.ID}}/delete">
+                <input type="hidden" name="back" value="/projects/{{$p.ID}}/close">
+                <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+      </div>
+      {{end}}
+      <details class="disclosure" {{if not $snap.Lessons}}open{{end}}>
+        <summary>Record a lesson</summary>
+        <div class="disclosure-body">
+          <form method="post" action="/projects/{{$p.ID}}/lessons">
+            <input type="hidden" name="back" value="/projects/{{$p.ID}}/close">
+            <div class="form-row">
+              <div class="field">
+                <label for="ls_cat">Category</label>
+                <select id="ls_cat" name="category">
+                  <option value="went_well">What went well</option>
+                  <option value="went_wrong">What went wrong</option>
+                  <option value="do_differently">Do differently next time</option>
+                </select>
+              </div>
+              <div class="field" style="grid-column:span 2">
+                <label for="ls_lesson">What happened?</label>
+                <input type="text" id="ls_lesson" name="lesson" required>
+              </div>
+            </div>
+            <div class="field">
+              <label for="ls_rec">Recommendation for next time</label>
+              <input type="text" id="ls_rec" name="recommendation">
+            </div>
+            <button class="btn btn-primary" type="submit">Record lesson</button>
+          </form>
+        </div>
+      </details>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Closure</h2>
+        <span class="hint">The written record that outlives memories</span>
+      </div>
+      {{if $p.IsClosed}}
+        <p><span class="badge badge-grey">{{if eq $p.Status "cancelled"}}Cancelled{{else}}Closed{{end}} {{date $p.ClosedAt}}</span></p>
+        {{if $p.ClosureSummary}}<p class="prose">{{$p.ClosureSummary}}</p>{{end}}
+        <form method="post" action="/projects/{{$p.ID}}/reopen">
+          <button class="btn" type="submit">Reopen project</button>
+        </form>
+      {{else}}
+      <form method="post" action="/projects/{{$p.ID}}/close">
+        <div class="field">
+          <label for="closure_summary">Closure summary</label>
+          <textarea id="closure_summary" name="closure_summary" rows="5"
+            placeholder="What was delivered, what was measured against the baseline, what remains open (and who owns it).">{{$p.ClosureSummary}}</textarea>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Close project</button>
+          <button class="btn btn-danger" name="cancelled" value="1" type="submit">Cancel project</button>
+        </div>
+        <p class="help" style="margin-top:8px">Cancelling is a legitimate outcome — a project stopped early for good reasons is a success of governance, not a failure.</p>
+      </form>
+      {{end}}
+    </div>
+
+    {{if not $p.IsClosed}}
+    <div class="card" style="border-color:var(--red-bg)">
+      <div class="card-head"><h2>Danger zone</h2></div>
+      <p class="small muted">Deleting a project permanently removes everything in it — tasks, risks, benefits, history. There is no undo (other than restoring a backup).</p>
+      <details class="disclosure">
+        <summary>Delete this project permanently</summary>
+        <div class="disclosure-body">
+          <form method="post" action="/projects/{{$p.ID}}/delete">
+            <div class="field">
+              <label for="confirm_code">Type <b>{{$p.Code}}</b> to confirm</label>
+              <input type="text" id="confirm_code" name="confirm_code" autocomplete="off">
+            </div>
+            <button class="btn btn-danger" type="submit">Delete permanently</button>
+          </form>
+        </div>
+      </details>
+    </div>
+    {{end}}
+  </div>
+
+  <div>
+    {{template "gate_panel" .}}
+    {{if .Data.GateHistory}}
+    <div class="card">
+      <div class="card-head"><h2>Gate history</h2></div>
+      {{range .Data.GateHistory}}
+      <div style="padding:6px 0;border-bottom:1px solid var(--line-soft)">
+        <div class="small"><b>{{.FromName}} → {{.ToName}}</b> <span class="muted">{{datetime .MovedAt}}</span></div>
+        {{if .Overridden}}
+          <div class="small" style="color:var(--amber)">Overridden: {{.OverrideReason}}</div>
+          {{if .UnmetCriteria}}<div class="small muted">Unmet at the time: {{.UnmetCriteria}}</div>{{end}}
+        {{end}}
+      </div>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+</div>
+{{end}}

@@ -1,0 +1,164 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="sub">The portfolio at a glance — outcomes first, activity second.</p>
+  </div>
+  <div class="toolbar">
+    <a class="btn" href="/ideas">Add an idea</a>
+    <a class="btn btn-primary" href="/projects/new">New project</a>
+  </div>
+</div>
+
+{{if not .Data.HasAnything}}
+<div class="card">
+  <div class="empty">
+    <p class="empty-title">Welcome. This is your operating system for digitalisation projects.</p>
+    <p>Work flows from <b>Problem → Discovery → Business case → Delivery → Adoption → Measured benefit</b>.
+    Start by capturing ideas in the portfolio pipeline, score them, and convert the best one into a project —
+    the built-in coach will guide you from there, stage by stage.</p>
+    <div class="form-actions" style="justify-content:center">
+      <a class="btn btn-primary" href="/ideas">Capture your first idea</a>
+      <a class="btn" href="/projects/new">Or jump straight to a project</a>
+    </div>
+  </div>
+</div>
+{{else}}
+
+<div class="stat-row">
+  <div class="stat stat-accent">
+    <div class="stat-label">Active projects</div>
+    <div class="stat-value">{{.Data.Active}}</div>
+    <div class="stat-note">{{.Data.Closed}} closed · {{.Data.OpenIdeas}} ideas in the pipeline</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Annualised benefit realised</div>
+    <div class="stat-value">{{money .Data.RealisedAnnual}}</div>
+    <div class="stat-note">of {{money .Data.ExpectedAnnual}} expected</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Hours saved per month</div>
+    <div class="stat-value">{{num .Data.HoursSavedMonthly}}</div>
+    <div class="stat-note">measured, across all projects</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Benefits measured</div>
+    <div class="stat-value">{{.Data.BenefitsMeasured}}</div>
+    <div class="stat-note">benefits with at least one actual</div>
+  </div>
+</div>
+
+<div class="grid grid-main-side">
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <h2>What should I do next?</h2>
+        <span class="hint">The single most important action per project</span>
+      </div>
+      {{if .Data.NextActions}}
+        {{range .Data.NextActions}}
+        <div class="coach-item">
+          <span class="coach-sev {{.Advice.Severity}}">{{if eq .Advice.Severity "act"}}Act now{{else if eq .Advice.Severity "soon"}}Soon{{else}}Consider{{end}}</span>
+          <div>
+            <div class="coach-msg"><a href="/projects/{{.P.ID}}/{{.Advice.Link}}">{{.Advice.Message}}</a></div>
+            <div class="coach-why"><span class="ref">{{.P.Code}}</span> {{.P.Name}}</div>
+          </div>
+        </div>
+        {{end}}
+      {{else}}
+        <p class="muted small">All projects are in good shape. Review the idea pipeline or measure a benefit.</p>
+      {{end}}
+    </div>
+
+    {{if .Data.Attention}}
+    <div class="card">
+      <div class="card-head"><h2>Projects needing attention</h2></div>
+      {{range .Data.Attention}}
+      <div style="padding:8px 0;border-bottom:1px solid var(--line-soft)">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          {{template "health_badge" .Health}}
+          <a href="/projects/{{.P.ID}}/overview"><b>{{.P.Name}}</b></a>
+          <span class="ref">{{.P.Code}}</span>
+          <span class="muted small">{{stageName .P.Stage}}</span>
+        </div>
+        <ul class="health-reasons">
+          {{range .Health.Reasons}}<li>{{.}}</li>{{end}}
+        </ul>
+      </div>
+      {{end}}
+    </div>
+    {{end}}
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-head"><h2>Upcoming milestones</h2><span class="hint">next 21 days</span></div>
+        {{if .Data.Milestones}}
+        <table class="table"><tbody>
+          {{range .Data.Milestones}}
+          <tr>
+            <td>{{.Name}}<div class="small muted">{{.ProjectCode}} · {{.ProjectName}}</div></td>
+            <td class="right" style="white-space:nowrap">
+              {{if .Overdue}}<span class="badge badge-red">{{date .DueDate}}</span>
+              {{else}}{{date .DueDate}}{{end}}
+            </td>
+          </tr>
+          {{end}}
+        </tbody></table>
+        {{else}}<p class="muted small">No milestones due in the next three weeks.</p>{{end}}
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Overdue work</h2></div>
+        {{if .Data.Overdue}}
+        <table class="table"><tbody>
+          {{range .Data.Overdue}}
+          <tr>
+            <td><span class="ref">{{.Ref}}</span> {{.Title}}<div class="small muted">{{.ProjectCode}} · {{.ProjectName}}</div></td>
+            <td class="right"><span class="badge badge-red">{{date .DueDate}}</span></td>
+          </tr>
+          {{end}}
+        </tbody></table>
+        {{else}}<p class="muted small">Nothing is overdue. Keep it that way.</p>{{end}}
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Projects by stage</h2></div>
+      {{$max := .Data.MaxStage}}
+      {{$byStage := .Data.ByStage}}
+      {{range stages}}
+        {{$n := index $byStage .}}
+        <div class="chart-row">
+          <span>{{stageName .}}</span>
+          <div class="bar"><span style="width:{{if $n}}{{printf "%.0f" (pctOf $n $max)}}%{{else}}0{{end}}"></span></div>
+          <span class="num">{{$n}}</span>
+        </div>
+      {{end}}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Portfolio health</h2></div>
+      {{$hc := .Data.HealthCount}}
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <span class="badge badge-green"><span class="dot"></span>On track · {{index $hc "green"}}</span>
+        <span class="badge badge-amber"><span class="dot"></span>At risk · {{index $hc "amber"}}</span>
+        <span class="badge badge-red"><span class="dot"></span>Attention · {{index $hc "red"}}</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Major risks</h2><span class="hint">open, high severity</span></div>
+      {{if .Data.MajorRisks}}
+        {{range .Data.MajorRisks}}
+        <div style="padding:7px 0;border-bottom:1px solid var(--line-soft)">
+          <div><span class="ref">{{.Ref}}</span> <a href="/projects/{{.ProjectID}}/raid">{{.Title}}</a></div>
+          <div class="small muted">{{.ProjectCode}} · score {{.Score}}{{if not .Mitigation}} · <b style="color:var(--red)">no mitigation</b>{{end}}</div>
+        </div>
+        {{end}}
+      {{else}}<p class="muted small">No open high-severity risks across the portfolio.</p>{{end}}
+    </div>
+  </div>
+</div>
+{{end}}
+{{end}}

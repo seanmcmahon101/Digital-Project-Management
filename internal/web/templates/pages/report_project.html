@@ -1,0 +1,159 @@
+{{define "content"}}
+{{$p := .Data.P}}
+{{$snap := .Data.Snap}}
+{{$fin := .Data.Financials}}
+<div class="crumbs no-print"><a href="/reports">Reports</a> / {{$p.Code}}</div>
+<div class="page-head">
+  <div>
+    <h1>{{$p.Name}} — status report</h1>
+    <p class="sub"><span class="ref">{{$p.Code}}</span> · {{stageName $p.Stage}} · {{date .Data.Today}}</p>
+  </div>
+  <div class="toolbar no-print">
+    <a class="btn" href="/projects/{{$p.ID}}/overview">Open workspace</a>
+    <a class="btn" href="/projects/{{$p.ID}}/export/case" hx-boost="false" download>Business case PDF</a>
+    <a class="btn btn-primary" href="/projects/{{$p.ID}}/export/status" hx-boost="false" download>Export as PDF</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2>Summary</h2>
+    {{template "health_badge" .Data.Health}}
+  </div>
+  <div class="grid grid-2">
+    <div>
+      <p class="small"><b>Sponsor:</b> {{$p.Sponsor}} &nbsp; <b>Lead:</b> {{$p.Lead}}</p>
+      <p class="small"><b>Started:</b> {{date $p.StartDate}} &nbsp; <b>Target end:</b> {{date $p.TargetEnd}}{{if $p.GoLive}} &nbsp; <b>Go-live:</b> {{date $p.GoLive}}{{end}}</p>
+      {{if $p.ProblemStatement}}<p class="small"><b>Problem:</b> {{truncate 300 $p.ProblemStatement}}</p>{{end}}
+      {{if $p.Goal}}<p class="small"><b>Goal:</b> {{truncate 300 $p.Goal}}</p>{{end}}
+    </div>
+    <div>
+      {{if .Data.Health.Reasons}}
+      <p class="small" style="font-weight:600;margin-bottom:4px">Health notes</p>
+      <ul class="health-reasons">{{range .Data.Health.Reasons}}<li>{{.}}</li>{{end}}</ul>
+      {{else}}
+      <p class="small muted">No health concerns detected.</p>
+      {{end}}
+      <p class="small" style="margin-top:8px"><b>Gate:</b> {{.Data.Gate.MetCount}} of {{len .Data.Gate.Criteria}} criteria met{{if .Data.Gate.NextStage}} toward {{stageName .Data.Gate.NextStage}}{{end}}</p>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Financial case</h2></div>
+  <div class="stat-row" style="margin-bottom:0">
+    <div class="stat"><div class="stat-label">Estimated cost</div><div class="stat-value">{{money $fin.Financials.EstimatedCost}}</div></div>
+    <div class="stat"><div class="stat-label">Approved budget</div><div class="stat-value">{{money $fin.Financials.ApprovedBudget}}</div></div>
+    <div class="stat"><div class="stat-label">Actual cost</div><div class="stat-value">{{money $fin.Financials.ActualCost}}</div></div>
+    <div class="stat"><div class="stat-label">Expected annual value</div><div class="stat-value">{{money $fin.ExpectedAnnualValue}}</div></div>
+    <div class="stat"><div class="stat-label">First-year ROI</div><div class="stat-value">{{if $fin.HasROI}}{{pct $fin.ROI}}{{else}}—{{end}}</div></div>
+    <div class="stat"><div class="stat-label">Payback</div><div class="stat-value">{{if $fin.HasPayback}}{{num $fin.PaybackMonths}} months{{else}}—{{end}}</div></div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Milestones</h2></div>
+    {{if $snap.Milestones}}
+    <table class="table"><tbody>
+      {{range $snap.Milestones}}
+      <tr>
+        <td>{{.Name}}</td>
+        <td style="white-space:nowrap">{{date .DueDate}}</td>
+        <td class="right">
+          {{if .Done}}<span class="badge badge-green">Done</span>
+          {{else if .Overdue}}<span class="badge badge-red">Overdue</span>
+          {{else}}<span class="badge badge-grey">Planned</span>{{end}}
+        </td>
+      </tr>
+      {{end}}
+    </tbody></table>
+    {{else}}<p class="muted small">No milestones defined.</p>{{end}}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Top open risks &amp; issues</h2></div>
+    {{$shown := 0}}
+    {{if $snap.Raid}}
+    <table class="table"><tbody>
+      {{range $snap.Raid}}
+      {{if and (eq .Status "open") (lt $shown 6)}}
+      {{$shown = add $shown 1}}
+      <tr>
+        <td><span class="ref">{{.Ref}}</span> {{.Title}}</td>
+        <td class="right">
+          {{if eq .Severity "high"}}<span class="badge badge-red">{{.Score}}</span>
+          {{else if eq .Severity "medium"}}<span class="badge badge-amber">{{.Score}}</span>
+          {{else}}<span class="badge badge-grey">{{.Score}}</span>{{end}}
+        </td>
+      </tr>
+      {{end}}
+      {{end}}
+    </tbody></table>
+    {{if eq $shown 0}}<p class="muted small">No open items.</p>{{end}}
+    {{else}}<p class="muted small">The RAID register is empty.</p>{{end}}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Benefits</h2></div>
+  {{if $snap.Benefits}}
+  <table class="table">
+    <thead><tr><th>Benefit</th><th>Baseline</th><th>Target</th><th>Latest actual</th><th>Status</th></tr></thead>
+    <tbody>
+      {{range $snap.Benefits}}
+      <tr>
+        <td>{{.Name}}</td>
+        <td>{{if .HasBaseline}}{{num .BaselineValue.Float64}} {{.Unit}}{{else}}—{{end}}</td>
+        <td>{{if .HasTarget}}{{num .TargetValue.Float64}} {{.Unit}}{{else}}—{{end}}</td>
+        <td>{{with .Latest}}{{num .Value}} ({{date .MeasuredAt}}){{else}}—{{end}}</td>
+        <td>
+          {{if .Achieved}}<span class="badge badge-green">Achieved</span>
+          {{else if .Latest}}<span class="badge badge-amber">In progress</span>
+          {{else}}<span class="badge badge-grey">Not measured</span>{{end}}
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="muted small">No benefits defined.</p>{{end}}
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Delivery</h2></div>
+    <p class="small">Tasks: <b>{{.Data.DoneTasks}} done of {{len $snap.Tasks}}</b></p>
+    {{if $snap.Requirements}}
+    {{$musts := 0}}{{$passing := 0}}
+    {{range $snap.Requirements}}{{if eq .Moscow "must"}}{{$musts = add $musts 1}}{{if eq .TestSummary "passing"}}{{$passing = add $passing 1}}{{end}}{{end}}{{end}}
+    <p class="small">Must-have requirements passing tests: <b>{{$passing}} of {{$musts}}</b></p>
+    {{end}}
+    {{if $snap.Readiness}}
+    {{$rt := len $snap.Readiness}}{{$rd := 0}}{{range $snap.Readiness}}{{if .Done}}{{$rd = add $rd 1}}{{end}}{{end}}
+    <p class="small">Go-live readiness: <b>{{$rd}} of {{$rt}}</b> items complete</p>
+    {{end}}
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Recent gate history</h2></div>
+    {{if .Data.GateHistory}}
+    {{range .Data.GateHistory}}
+    <p class="small" style="margin:4px 0">{{.FromName}} → {{.ToName}} <span class="muted">({{datetime .MovedAt}})</span>
+    {{if .Overridden}}<span class="badge badge-amber">overridden</span>{{end}}</p>
+    {{end}}
+    {{else}}<p class="muted small">No stage transitions yet.</p>{{end}}
+  </div>
+</div>
+
+{{if .Data.StatusHistory}}
+<div class="card">
+  <div class="card-head"><h2>Recent status trend</h2><span class="hint">Point-in-time captures, newest first</span></div>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Captured</th><th>Health</th><th>Stage</th><th>Tasks</th><th>Open RAID</th><th>Overdue</th><th>Realised value</th><th>Note</th></tr></thead>
+    <tbody>{{range .Data.StatusHistory}}<tr>
+      <td>{{datetime .CapturedAt}}</td><td>{{.HealthStatus}}{{if .HasPrevious}} · {{.HealthMovement}}{{end}}</td><td>{{stageName .Stage}}</td>
+      <td>{{.DoneTasks}} / {{.TotalTasks}}</td><td>{{.OpenRaidItems}}</td><td>{{.TotalOverdue}}</td><td>{{money .RealisedAnnualValue}}</td><td>{{.Note}}</td>
+    </tr>{{end}}</tbody>
+  </table></div>
+</div>
+{{end}}
+{{end}}

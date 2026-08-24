@@ -1,0 +1,147 @@
+{{define "content"}}
+{{template "project_header" .}}
+{{$p := .Data.P}}
+{{$snap := .Data.Snap}}
+
+<div class="card">
+  <div class="card-head">
+    <h2>RAID register</h2>
+    <span class="hint">Risks (might happen) · Issues (happening now) · Assumptions (believed true) · Dependencies (outside your control)</span>
+  </div>
+
+  {{if $snap.Raid}}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Ref</th><th>Type</th><th>Item</th><th>Owner</th><th>Score</th><th>Mitigation / plan</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {{range $snap.Raid}}
+      <tr>
+        <td><span class="ref">{{.Ref}}</span></td>
+        <td style="white-space:nowrap">{{raidKindName .Kind}}</td>
+        <td>{{.Title}}{{if .Detail}}<div class="small muted">{{truncate 120 .Detail}}</div>{{end}}
+          {{if .DueDate}}<div class="small muted">Due {{date .DueDate}}</div>{{end}}</td>
+        <td>{{.Owner}}</td>
+        <td>
+          {{if eq .Kind "risk"}}
+            {{if eq .Severity "high"}}<span class="badge badge-red">{{.Score}}</span>
+            {{else if eq .Severity "medium"}}<span class="badge badge-amber">{{.Score}}</span>
+            {{else}}<span class="badge badge-grey">{{.Score}}</span>{{end}}
+            <div class="small muted">P{{.Probability}}×I{{.Impact}}</div>
+          {{else}}
+            {{if eq .Severity "high"}}<span class="badge badge-red">High</span>
+            {{else if eq .Severity "medium"}}<span class="badge badge-amber">Med</span>
+            {{else}}<span class="badge badge-grey">Low</span>{{end}}
+          {{end}}
+        </td>
+        <td style="max-width:260px">
+          {{if .Mitigation}}{{truncate 140 .Mitigation}}
+          {{else if and (eq .Kind "risk") (eq .Status "open") (eq .Severity "high")}}
+            <span class="badge badge-red">No mitigation</span>
+          {{else}}<span class="muted">—</span>{{end}}
+        </td>
+        <td>
+          {{if eq .Status "open"}}<span class="badge badge-rose">Open</span>{{else}}<span class="badge badge-grey">Closed</span>{{end}}
+        </td>
+        <td class="actions">
+          <details class="disclosure" style="margin:0">
+            <summary style="padding:3px 8px;font-size:12px">Edit</summary>
+            <div class="disclosure-body" style="text-align:left;min-width:340px">
+              <form method="post" action="/raid/{{.ID}}/update">
+                <input type="hidden" name="back" value="/projects/{{$p.ID}}/raid">
+                <div class="field"><label>Title</label><input type="text" name="title" value="{{.Title}}" required></div>
+                <div class="field"><label>Detail</label><textarea name="detail" rows="2">{{.Detail}}</textarea></div>
+                <div class="field"><label>Mitigation / plan</label><textarea name="mitigation" rows="2" placeholder="How will you reduce, avoid, transfer or accept it?">{{.Mitigation}}</textarea></div>
+                <div class="form-row">
+                  <div class="field"><label>Owner</label><input type="text" name="owner" value="{{.Owner}}"></div>
+                  {{if eq .Kind "risk"}}
+                  <div class="field"><label>Probability (1–5)</label><input type="number" name="probability" min="0" max="5" value="{{.Probability}}"></div>
+                  {{end}}
+                  <div class="field"><label>Impact (1–5)</label><input type="number" name="impact" min="0" max="5" value="{{.Impact}}"></div>
+                  <div class="field"><label>Due date</label><input type="date" name="due_date" value="{{.DueDate}}"></div>
+                </div>
+                <div class="form-actions">
+                  <button class="btn btn-sm btn-primary" type="submit">Save</button>
+                </div>
+              </form>
+              <div style="display:flex;gap:6px;margin-top:8px">
+                <form method="post" action="/raid/{{.ID}}/status">
+                  <input type="hidden" name="back" value="/projects/{{$p.ID}}/raid">
+                  <button class="btn btn-sm" name="status" value="{{if eq .Status "open"}}closed{{else}}open{{end}}" type="submit">
+                    {{if eq .Status "open"}}Close{{else}}Reopen{{end}}
+                  </button>
+                </form>
+                <form method="post" action="/raid/{{.ID}}/delete">
+                  <input type="hidden" name="back" value="/projects/{{$p.ID}}/raid">
+                  <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+                </form>
+              </div>
+            </div>
+          </details>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}
+  <div class="empty">
+    <p class="empty-title">The register is empty</p>
+    <p>Every project has risks — an empty register means nobody has looked yet. Start with the classics:
+    key-person dependency, adoption resistance, integration surprises, and optimistic estimates.</p>
+  </div>
+  {{end}}
+
+  <details class="disclosure" {{if not $snap.Raid}}open{{end}}>
+    <summary>Add an item</summary>
+    <div class="disclosure-body">
+      <form method="post" action="/projects/{{$p.ID}}/raid">
+        <input type="hidden" name="back" value="/projects/{{$p.ID}}/raid">
+        <div class="form-row">
+          <div class="field">
+            <label for="r_kind">Type</label>
+            <select id="r_kind" name="kind">
+              <option value="risk">Risk — might happen</option>
+              <option value="issue">Issue — happening now</option>
+              <option value="assumption">Assumption — believed true</option>
+              <option value="dependency">Dependency — outside your control</option>
+            </select>
+          </div>
+          <div class="field" style="grid-column:span 2">
+            <label for="r_title">Title</label>
+            <input type="text" id="r_title" name="title" required placeholder="e.g. Operators revert to paper under time pressure">
+          </div>
+        </div>
+        <div class="field">
+          <label for="r_detail">Detail</label>
+          <textarea id="r_detail" name="detail" rows="2"></textarea>
+        </div>
+        <div class="field">
+          <label for="r_mit">Mitigation / plan</label>
+          <textarea id="r_mit" name="mitigation" rows="2" placeholder="For high risks this is not optional — reduce, avoid, transfer or consciously accept"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="r_owner">Owner</label>
+            <input type="text" id="r_owner" name="owner">
+          </div>
+          <div class="field">
+            <label for="r_prob">Probability (1–5)</label>
+            <input type="number" id="r_prob" name="probability" min="0" max="5" value="3">
+            <p class="help">Risks only</p>
+          </div>
+          <div class="field">
+            <label for="r_impact">Impact (1–5)</label>
+            <input type="number" id="r_impact" name="impact" min="0" max="5" value="3">
+          </div>
+          <div class="field">
+            <label for="r_due">Due date</label>
+            <input type="date" id="r_due" name="due_date">
+            <p class="help">Mainly for dependencies</p>
+          </div>
+        </div>
+        <button class="btn btn-primary" type="submit">Add to register</button>
+      </form>
+    </div>
+  </details>
+</div>
+{{end}}

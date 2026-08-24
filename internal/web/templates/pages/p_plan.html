@@ -1,0 +1,111 @@
+{{define "content"}}
+{{template "project_header" .}}
+{{$p := .Data.P}}
+{{$snap := .Data.Snap}}
+{{$tl := .Data.Timeline}}
+
+<div class="card">
+  <div class="card-head">
+    <h2>Timeline</h2>
+    <span class="hint">Milestones between {{if $tl.Valid}}{{date $tl.StartISO}} and {{date $tl.EndISO}} · the red line is today{{else}}project dates{{end}}</span>
+  </div>
+  {{if and $tl.Valid $tl.Rows}}
+  <div class="timeline-wrap">
+    <div class="timeline">
+      {{range $tl.Rows}}
+      <div class="tl-row">
+        <span class="tl-name" title="{{.M.Name}}">{{if .M.Done}}<span style="color:var(--green)">✓</span> {{end}}{{.M.Name}}</span>
+        <div class="tl-track">
+          <span class="tl-today" style="left:{{printf "%.1f" $tl.TodayPct}}%"></span>
+          <span class="tl-marker {{if .M.Done}}done{{else if .M.Overdue}}overdue{{end}}" style="left:{{printf "%.1f" .PosPct}}%" title="{{date .M.DueDate}}"></span>
+        </div>
+      </div>
+      {{end}}
+      <div class="tl-scale"><span>{{date $tl.StartISO}}</span><span>{{date $tl.EndISO}}</span></div>
+    </div>
+  </div>
+  {{else}}
+  <div class="empty">
+    <p class="empty-title">No timeline yet</p>
+    <p>Add milestones with due dates and set a target end date on the Overview tab. Milestones make slippage visible while you can still act on it.</p>
+  </div>
+  {{end}}
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2>Milestones</h2>
+    <span class="hint">The handful of moments that tell you whether the plan is real</span>
+  </div>
+  {{if $snap.Milestones}}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th></th><th>Milestone</th><th>Due</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {{range $snap.Milestones}}
+      <tr>
+        <td style="width:36px">
+          <form method="post" action="/milestones/{{.ID}}/toggle">
+            <input type="hidden" name="back" value="/projects/{{$p.ID}}/plan">
+            <input type="hidden" name="done" value="{{if .Done}}0{{else}}1{{end}}">
+            <button class="btn btn-sm" type="submit" title="{{if .Done}}Mark incomplete{{else}}Mark complete{{end}}">{{if .Done}}✓{{else}}○{{end}}</button>
+          </form>
+        </td>
+        <td>{{.Name}}{{if .Notes}}<div class="small muted">{{.Notes}}</div>{{end}}</td>
+        <td style="white-space:nowrap">{{date .DueDate}}</td>
+        <td>
+          {{if .Done}}<span class="badge badge-green">Done {{date .CompletedAt}}</span>
+          {{else if .Overdue}}<span class="badge badge-red">Overdue</span>
+          {{else}}<span class="badge badge-grey">Planned</span>{{end}}
+        </td>
+        <td class="actions">
+          <form method="post" action="/milestones/{{.ID}}/delete">
+            <input type="hidden" name="back" value="/projects/{{$p.ID}}/plan">
+            <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{end}}
+  <details class="disclosure" {{if not $snap.Milestones}}open{{end}}>
+    <summary>Add a milestone</summary>
+    <div class="disclosure-body">
+      <form method="post" action="/projects/{{$p.ID}}/milestones">
+        <input type="hidden" name="back" value="/projects/{{$p.ID}}/plan">
+        <div class="form-row">
+          <div class="field">
+            <label for="ms_name">Milestone</label>
+            <input type="text" id="ms_name" name="name" required placeholder="e.g. Pilot live in one cell">
+          </div>
+          <div class="field">
+            <label for="ms_due">Due date</label>
+            <input type="date" id="ms_due" name="due_date">
+          </div>
+        </div>
+        <div class="field">
+          <label for="ms_notes">Notes (optional)</label>
+          <input type="text" id="ms_notes" name="notes">
+        </div>
+        <button class="btn btn-primary" type="submit">Add milestone</button>
+      </form>
+    </div>
+  </details>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Delivery tasks</h2></div>
+    <p class="small muted">{{.Data.DoneTasks}} of {{len $snap.Tasks}} done. Break work down until each piece takes days, not weeks.</p>
+    <a class="btn" href="/projects/{{$p.ID}}/board">Open the board →</a>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Risks</h2></div>
+    {{$openRisks := 0}}{{range $snap.Raid}}{{if and (eq .Kind "risk") (eq .Status "open")}}{{$openRisks = add $openRisks 1}}{{end}}{{end}}
+    <p class="small muted">{{$openRisks}} open risks. An empty register doesn't mean you're safe — it means nobody has looked.</p>
+    <a class="btn" href="/projects/{{$p.ID}}/raid">Open the RAID register →</a>
+  </div>
+</div>
+{{end}}

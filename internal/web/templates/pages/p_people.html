@@ -1,0 +1,174 @@
+{{define "content"}}
+{{template "project_header" .}}
+{{$p := .Data.P}}
+{{$snap := .Data.Snap}}
+
+<div class="card">
+  <div class="card-head">
+    <h2>Stakeholder register</h2>
+    <span class="hint">Who is affected, who can block you, who has to change how they work</span>
+  </div>
+  {{if $snap.Stakeholders}}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Name</th><th>Role</th><th>Influence</th><th>Interest</th><th>Attitude</th><th>Notes</th><th></th></tr></thead>
+    <tbody>
+      {{range $snap.Stakeholders}}
+      <tr>
+        <td><b>{{.Name}}</b></td>
+        <td>{{.Role}}</td>
+        <td>{{if eq .Influence "high"}}<span class="badge badge-rose">High</span>{{else if eq .Influence "medium"}}Medium{{else}}<span class="muted">Low</span>{{end}}</td>
+        <td>{{if eq .Interest "high"}}<span class="badge badge-rose">High</span>{{else if eq .Interest "medium"}}Medium{{else}}<span class="muted">Low</span>{{end}}</td>
+        <td>
+          {{if eq .Attitude "champion"}}<span class="badge badge-green">Champion</span>
+          {{else if eq .Attitude "supportive"}}<span class="badge badge-green">Supportive</span>
+          {{else if eq .Attitude "resistant"}}<span class="badge badge-red">Resistant</span>
+          {{else}}<span class="badge badge-grey">Neutral</span>{{end}}
+        </td>
+        <td class="small muted" style="max-width:240px">{{.Notes}}</td>
+        <td class="actions">
+          <details class="disclosure" style="margin:0">
+            <summary style="padding:3px 8px;font-size:12px">Edit</summary>
+            <div class="disclosure-body" style="text-align:left;min-width:320px">
+              <form method="post" action="/stakeholders/{{.ID}}/update">
+                <input type="hidden" name="back" value="/projects/{{$p.ID}}/people">
+                <div class="form-row">
+                  <div class="field"><label>Name</label><input type="text" name="name" value="{{.Name}}" required></div>
+                  <div class="field"><label>Role</label><input type="text" name="role" value="{{.Role}}"></div>
+                </div>
+                <div class="form-row">
+                  <div class="field"><label>Influence</label>
+                    <select name="influence">
+                      <option value="high" {{if eq .Influence "high"}}selected{{end}}>High</option>
+                      <option value="medium" {{if eq .Influence "medium"}}selected{{end}}>Medium</option>
+                      <option value="low" {{if eq .Influence "low"}}selected{{end}}>Low</option>
+                    </select></div>
+                  <div class="field"><label>Interest</label>
+                    <select name="interest">
+                      <option value="high" {{if eq .Interest "high"}}selected{{end}}>High</option>
+                      <option value="medium" {{if eq .Interest "medium"}}selected{{end}}>Medium</option>
+                      <option value="low" {{if eq .Interest "low"}}selected{{end}}>Low</option>
+                    </select></div>
+                  <div class="field"><label>Attitude</label>
+                    <select name="attitude">
+                      <option value="champion" {{if eq .Attitude "champion"}}selected{{end}}>Champion</option>
+                      <option value="supportive" {{if eq .Attitude "supportive"}}selected{{end}}>Supportive</option>
+                      <option value="neutral" {{if eq .Attitude "neutral"}}selected{{end}}>Neutral</option>
+                      <option value="resistant" {{if eq .Attitude "resistant"}}selected{{end}}>Resistant</option>
+                    </select></div>
+                </div>
+                <div class="field"><label>Notes</label><textarea name="notes" rows="2">{{.Notes}}</textarea></div>
+                <div class="form-actions"><button class="btn btn-sm btn-primary" type="submit">Save</button></div>
+              </form>
+              <form method="post" action="/stakeholders/{{.ID}}/delete" style="margin-top:6px">
+                <input type="hidden" name="back" value="/projects/{{$p.ID}}/people">
+                <button class="btn btn-sm btn-danger" type="submit">Remove</button>
+              </form>
+            </div>
+          </details>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}
+  <div class="empty">
+    <p class="empty-title">No stakeholders mapped</p>
+    <p>Surprises here are expensive later. High-influence, high-interest people need active engagement;
+    resistant ones need to be heard early — resistance usually contains real information about the design.</p>
+  </div>
+  {{end}}
+  <details class="disclosure" {{if not $snap.Stakeholders}}open{{end}}>
+    <summary>Add a stakeholder</summary>
+    <div class="disclosure-body">
+      <form method="post" action="/projects/{{$p.ID}}/stakeholders">
+        <input type="hidden" name="back" value="/projects/{{$p.ID}}/people">
+        <div class="form-row">
+          <div class="field"><label for="sh_name">Name</label><input type="text" id="sh_name" name="name" required></div>
+          <div class="field"><label for="sh_role">Role</label><input type="text" id="sh_role" name="role" placeholder="e.g. Production Manager"></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label for="sh_inf">Influence</label>
+            <select id="sh_inf" name="influence"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>
+          <div class="field"><label for="sh_int">Interest</label>
+            <select id="sh_int" name="interest"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>
+          <div class="field"><label for="sh_att">Attitude</label>
+            <select id="sh_att" name="attitude"><option value="champion">Champion</option><option value="supportive">Supportive</option><option value="neutral" selected>Neutral</option><option value="resistant">Resistant</option></select></div>
+        </div>
+        <div class="field"><label for="sh_notes">Notes</label><input type="text" id="sh_notes" name="notes" placeholder="What do they care about? What would win them over?"></div>
+        <button class="btn btn-primary" type="submit">Add stakeholder</button>
+      </form>
+    </div>
+  </details>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2>RACI matrix</h2>
+    <span class="hint">R = does the work · A = accountable (exactly one per activity) · C = consulted · I = informed</span>
+  </div>
+  {{if not $snap.Stakeholders}}
+  <p class="muted small">Add stakeholders first, then assign responsibilities per activity.</p>
+  {{else}}
+    {{if $snap.Raci}}
+    <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Activity</th>
+          {{range $snap.Stakeholders}}<th style="text-align:center" title="{{.Name}}">{{truncate 12 .Name}}</th>{{end}}
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range $act := $snap.Raci}}
+        <tr>
+          <td>{{$act.Name}}</td>
+          {{range $sh := $snap.Stakeholders}}
+          <td style="text-align:center">
+            <form method="post" action="/raci/set">
+              <input type="hidden" name="back" value="/projects/{{$p.ID}}/people">
+              <input type="hidden" name="activity_id" value="{{$act.ID}}">
+              <input type="hidden" name="stakeholder_id" value="{{$sh.ID}}">
+              <select class="raci-select" name="letter" onchange="this.form.requestSubmit()" aria-label="RACI for {{$sh.Name}} on {{$act.Name}}">
+                {{$cur := index $act.Letters $sh.ID}}
+                <option value="" {{if eq $cur ""}}selected{{end}}>—</option>
+                <option value="R" {{if eq $cur "R"}}selected{{end}}>R</option>
+                <option value="A" {{if eq $cur "A"}}selected{{end}}>A</option>
+                <option value="C" {{if eq $cur "C"}}selected{{end}}>C</option>
+                <option value="I" {{if eq $cur "I"}}selected{{end}}>I</option>
+              </select>
+            </form>
+          </td>
+          {{end}}
+          <td class="actions">
+            <form method="post" action="/raci/{{$act.ID}}/delete">
+              <input type="hidden" name="back" value="/projects/{{$p.ID}}/people">
+              <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    </div>
+    {{else}}
+    <p class="muted small">No activities yet. Add the handful of key activities — “Design booking screens”, “Operator training”, “Go-live cutover” — and mark who is Responsible, Accountable, Consulted and Informed. When nobody is Accountable, everybody assumes someone else is doing it.</p>
+    {{end}}
+    <details class="disclosure" {{if not $snap.Raci}}open{{end}}>
+      <summary>Add an activity</summary>
+      <div class="disclosure-body">
+        <form method="post" action="/projects/{{$p.ID}}/raci">
+          <input type="hidden" name="back" value="/projects/{{$p.ID}}/people">
+          <div class="field">
+            <label for="ra_name">Activity</label>
+            <input type="text" id="ra_name" name="name" required placeholder="e.g. Operator training">
+          </div>
+          <button class="btn btn-primary" type="submit">Add activity</button>
+        </form>
+      </div>
+    </details>
+  {{end}}
+</div>
+{{end}}

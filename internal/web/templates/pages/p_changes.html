@@ -1,0 +1,53 @@
+{{define "content"}}
+{{template "project_header" .}}
+{{$p := .Data.P}}{{$snap := .Data.Snap}}
+<div class="card">
+  <div class="card-head"><h2>Change requests</h2><span class="hint">Link each request to scope or requirements, then quantify cost and time</span></div>
+  {{if $snap.Changes}}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Ref</th><th>Change and traceability</th><th>Impact</th><th>Status</th><th>Decision</th><th></th></tr></thead>
+    <tbody>{{range $snap.Changes}}{{$change := .}}<tr>
+      <td><span class="ref">{{.Ref}}</span></td>
+      <td style="min-width:260px">
+        <b>{{.Title}}</b>{{if .Description}}<div class="small muted">{{truncate 180 .Description}}</div>{{end}}
+        {{if or .ScopeItems .Requirements}}<div class="small" style="margin-top:5px">{{range .ScopeItems}}<span class="badge badge-grey">{{.Ref}}</span> {{end}}{{range .Requirements}}<span class="badge badge-grey">{{.Ref}}</span> {{end}}</div>{{else}}<div class="small muted">No scope or requirements linked</div>{{end}}
+        {{if eq .Status "proposed"}}<details class="disclosure" style="margin-top:8px"><summary>Edit impact and links</summary><div class="disclosure-body">
+          <form method="post" action="/changes/{{.ID}}/update">
+            <input type="hidden" name="back" value="/projects/{{$p.ID}}/changes">
+            <div class="field"><label>Requested change</label><input name="title" value="{{.Title}}" required></div>
+            <div class="field"><label>Description</label><textarea name="description" rows="2">{{.Description}}</textarea></div>
+            <div class="field"><label>Narrative impact</label><input name="impact" value="{{.Impact}}"></div>
+            <div class="form-row">
+              <div class="field"><label>Cost impact</label><input type="number" min="0" step="0.01" name="cost_impact" value="{{.CostImpact}}"></div>
+              <div class="field"><label>Schedule impact (days)</label><input type="number" name="schedule_impact_days" value="{{.ScheduleImpactDays}}"></div>
+              <div class="field"><label>Revised target date</label><input type="date" name="target_date_impact" value="{{.TargetDateImpact}}"></div>
+              <div class="field"><label>Raised by</label><input name="raised_by" value="{{.RaisedBy}}"></div>
+            </div>
+            {{if $snap.ScopeItems}}<fieldset class="field"><legend>Affected scope items</legend>{{range $snap.ScopeItems}}<label style="display:block"><input type="checkbox" name="scope_item_ids" value="{{.ID}}" {{if $change.AffectsScope .ID}}checked{{end}}> <span class="ref">{{.Ref}}</span> {{.Title}}</label>{{end}}</fieldset>{{end}}
+            {{if $snap.Requirements}}<fieldset class="field"><legend>Affected requirements</legend>{{range $snap.Requirements}}<label style="display:block"><input type="checkbox" name="requirement_ids" value="{{.ID}}" {{if $change.AffectsRequirement .ID}}checked{{end}}> <span class="ref">{{.Ref}}</span> {{.Title}}</label>{{end}}</fieldset>{{end}}
+            <button class="btn btn-primary btn-sm" type="submit">Save change request</button>
+          </form>
+        </div></details>{{end}}
+      </td>
+      <td class="small" style="max-width:220px">{{if .Impact}}{{.Impact}}{{else}}<span class="muted">No narrative</span>{{end}}{{if .CostImpact}}<div><b>{{money .CostImpact}}</b> cost</div>{{end}}{{if .ScheduleImpactDays}}<div><b>{{.ScheduleImpactDays}} days</b> schedule</div>{{end}}{{if .TargetDateImpact}}<div>Target: <b>{{date .TargetDateImpact}}</b></div>{{end}}<div class="muted">Raised by {{.RaisedBy}}</div></td>
+      <td style="white-space:nowrap">{{if eq .Status "proposed"}}<span class="badge badge-amber">Proposed</span>{{else if eq .Status "approved"}}<span class="badge badge-green">Approved</span>{{else if eq .Status "rejected"}}<span class="badge badge-red">Rejected</span>{{else}}<span class="badge badge-grey">Withdrawn</span>{{end}}{{if .DecidedAt}}<div class="small muted">{{date .DecidedAt}}</div>{{end}}</td>
+      <td>{{if eq .Status "proposed"}}<form method="post" action="/changes/{{.ID}}/decide" style="display:flex;gap:4px;flex-wrap:wrap"><input type="hidden" name="back" value="/projects/{{$p.ID}}/changes"><button class="btn btn-sm" name="status" value="approved">Approve</button><button class="btn btn-sm" name="status" value="rejected">Reject</button><button class="btn btn-sm" name="status" value="withdrawn">Withdraw</button></form>{{end}}</td>
+      <td class="actions"><form method="post" action="/changes/{{.ID}}/delete"><input type="hidden" name="back" value="/projects/{{$p.ID}}/changes"><button class="btn btn-sm btn-danger">Delete</button></form></td>
+    </tr>{{end}}</tbody>
+  </table></div>
+  {{else}}<div class="empty"><p class="empty-title">No change requests</p><p>Record requests outside the agreed scope, link what they affect, quantify the impact, and let the sponsor decide.</p></div>{{end}}
+
+  <details class="disclosure" open><summary>Raise a change request</summary><div class="disclosure-body">
+    <form method="post" action="/projects/{{$p.ID}}/changes">
+      <input type="hidden" name="back" value="/projects/{{$p.ID}}/changes">
+      <div class="field"><label for="cr_title">What is being requested?</label><input id="cr_title" name="title" required></div>
+      <div class="field"><label for="cr_desc">Description</label><textarea id="cr_desc" name="description" rows="2"></textarea></div>
+      <div class="field"><label for="cr_impact">Narrative impact</label><input id="cr_impact" name="impact" placeholder="Teams, dependencies, quality or delivery implications"></div>
+      <div class="form-row"><div class="field"><label for="cr_cost">Cost impact</label><input type="number" id="cr_cost" name="cost_impact" min="0" step="0.01" value="0"></div><div class="field"><label for="cr_days">Schedule impact (days)</label><input type="number" id="cr_days" name="schedule_impact_days" value="0"></div><div class="field"><label for="cr_date">Revised target date</label><input type="date" id="cr_date" name="target_date_impact"></div><div class="field"><label for="cr_by">Raised by</label><input id="cr_by" name="raised_by"></div></div>
+      {{if $snap.ScopeItems}}<fieldset class="field"><legend>Affected scope items</legend>{{range $snap.ScopeItems}}<label style="display:block"><input type="checkbox" name="scope_item_ids" value="{{.ID}}"> <span class="ref">{{.Ref}}</span> {{.Title}}</label>{{end}}</fieldset>{{end}}
+      {{if $snap.Requirements}}<fieldset class="field"><legend>Affected requirements</legend>{{range $snap.Requirements}}<label style="display:block"><input type="checkbox" name="requirement_ids" value="{{.ID}}"> <span class="ref">{{.Ref}}</span> {{.Title}}</label>{{end}}</fieldset>{{end}}
+      <button class="btn btn-primary">Raise change request</button>
+    </form>
+  </div></details>
+</div>
+{{end}}

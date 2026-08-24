@@ -1,0 +1,46 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1>Projects</h1>
+    <p class="sub">Every project moves through seven stages, each with a recommended gate before the next.</p>
+  </div>
+  <a class="btn btn-primary" href="/projects/new">New project</a>
+</div>
+
+{{if .Data.Rows}}
+<div class="card">
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Project</th><th>Stage</th><th>Health</th><th>Target end</th><th>Next step</th></tr></thead>
+    <tbody>
+      {{range .Data.Rows}}
+      <tr>
+        <td>
+          <a href="/projects/{{.P.ID}}/overview"><b>{{.P.Name}}</b></a>
+          <span class="ref">{{.P.Code}}</span>
+          {{if .P.IsClosed}}<span class="badge badge-grey">{{.P.Status}}</span>{{end}}
+          {{if .P.Department}}<div class="small muted">{{.P.Department}}</div>{{end}}
+        </td>
+        <td style="white-space:nowrap">{{stageName .P.Stage}}</td>
+        <td>{{template "health_badge" .Health}}</td>
+        <td style="white-space:nowrap">{{date .P.TargetEnd}}</td>
+        <td class="small muted" style="max-width:320px">{{.Next}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+</div>
+{{else}}
+<div class="card">
+  <div class="empty">
+    <p class="empty-title">No projects yet</p>
+    <p>A good project starts with a clearly stated problem, not a solution.
+    If you're not sure it deserves to be a project yet, capture it as an <a href="/ideas">idea</a> first and score it.</p>
+    <div class="form-actions" style="justify-content:center">
+      <a class="btn btn-primary" href="/projects/new">Start a project</a>
+    </div>
+  </div>
+</div>
+{{end}}
+{{end}}

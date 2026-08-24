@@ -1,0 +1,149 @@
+{{define "content"}}
+{{template "project_header" .}}
+{{$p := .Data.P}}
+{{$snap := .Data.Snap}}
+{{$fin := .Data.Financials}}
+
+<div class="grid grid-main-side">
+  <div>
+    {{template "coach_panel" dict "Advice" .Data.Advice "P" $p}}
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Project definition</h2>
+        <span class="hint">The problem and outcome — everything else hangs off these</span>
+      </div>
+      <form method="post" action="/projects/{{$p.ID}}/update">
+        <input type="hidden" name="back" value="/projects/{{$p.ID}}/overview">
+        <div class="field">
+          <label for="problem_statement">Problem statement</label>
+          <textarea id="problem_statement" name="problem_statement" rows="4"
+            placeholder="What hurts, who it hurts, and how often">{{$p.ProblemStatement}}</textarea>
+        </div>
+        <div class="field">
+          <label for="goal">Goal / desired outcome</label>
+          <textarea id="goal" name="goal" rows="2"
+            placeholder="What does better look like?">{{$p.Goal}}</textarea>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="sponsor">Sponsor</label>
+            <input type="text" id="sponsor" name="sponsor" value="{{$p.Sponsor}}">
+          </div>
+          <div class="field">
+            <label for="lead">Lead</label>
+            <input type="text" id="lead" name="lead" value="{{$p.Lead}}">
+          </div>
+          <div class="field">
+            <label for="department">Department</label>
+            <input type="text" id="department" name="department" value="{{$p.Department}}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="start_date">Start date</label>
+            <input type="date" id="start_date" name="start_date" value="{{$p.StartDate}}">
+          </div>
+          <div class="field">
+            <label for="target_end">Target end</label>
+            <input type="date" id="target_end" name="target_end" value="{{$p.TargetEnd}}">
+          </div>
+          <div class="field">
+            <label for="go_live">Go-live date</label>
+            <input type="date" id="go_live" name="go_live" value="{{$p.GoLive}}">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Save changes</button>
+        </div>
+      </form>
+    </div>
+
+    {{if .Data.Health.Reasons}}
+    <div class="card">
+      <div class="card-head"><h2>Why is this project {{if eq .Data.Health.Status "red"}}red{{else if eq .Data.Health.Status "amber"}}amber{{else}}rated this way{{end}}?</h2></div>
+      <ul class="health-reasons">
+        {{range .Data.Health.Reasons}}<li>{{.}}</li>{{end}}
+      </ul>
+    </div>
+    {{end}}
+  </div>
+
+  <div>
+    {{template "gate_panel" .}}
+
+    <div class="card">
+      <div class="card-head"><h2>At a glance</h2></div>
+      <table class="table"><tbody>
+        <tr><td>Tasks</td><td class="right">{{.Data.DoneTasks}} done of {{len $snap.Tasks}}</td></tr>
+        <tr><td>Milestones</td><td class="right">{{len $snap.Milestones}}</td></tr>
+        <tr><td>Open RAID items</td><td class="right">{{$open := 0}}{{range $snap.Raid}}{{if eq .Status "open"}}{{$open = add $open 1}}{{end}}{{end}}{{$open}}</td></tr>
+        <tr><td>Requirements</td><td class="right">{{len $snap.Requirements}}</td></tr>
+        <tr><td>Benefits defined</td><td class="right">{{len $snap.Benefits}}</td></tr>
+        <tr><td>Expected annual value</td><td class="right">{{money $fin.ExpectedAnnualValue}}</td></tr>
+        <tr><td>Investment / cost</td><td class="right">{{if $fin.Investment}}{{money $fin.Investment}}{{else}}—{{end}}</td></tr>
+        <tr><td>Stakeholders</td><td class="right">{{len $snap.Stakeholders}}</td></tr>
+      </tbody></table>
+    </div>
+
+    {{if .Data.GateHistory}}
+    <div class="card">
+      <div class="card-head"><h2>Gate history</h2></div>
+      {{range .Data.GateHistory}}
+      <div style="padding:6px 0;border-bottom:1px solid var(--line-soft)">
+        <div class="small"><b>{{.FromName}} → {{.ToName}}</b> <span class="muted">{{datetime .MovedAt}}</span></div>
+        {{if .Overridden}}<div class="small" style="color:var(--amber)">Overridden: {{.OverrideReason}}</div>{{end}}
+      </div>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h2>Status history</h2>
+      <p class="small muted mt0">Save a point-in-time baseline before a steering meeting or at the end of each reporting period.</p>
+    </div>
+    <form method="post" action="/projects/{{$p.ID}}/snapshots" style="display:flex;gap:8px;align-items:end">
+      <div class="field" style="margin:0;min-width:260px">
+        <label for="snapshot_note">Snapshot note (optional)</label>
+        <input id="snapshot_note" name="note" maxlength="1000" placeholder="e.g. August steering update">
+      </div>
+      <button class="btn btn-primary" type="submit">Capture now</button>
+    </form>
+  </div>
+  {{if .Data.StatusHistory}}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Captured</th><th>Health</th><th>Stage</th><th>Tasks complete</th><th>Open RAID</th><th>Overdue</th><th>Realised annual value</th><th>Note</th></tr></thead>
+      <tbody>
+        {{range .Data.StatusHistory}}
+        <tr>
+          <td style="white-space:nowrap">{{datetime .CapturedAt}}</td>
+          <td>
+            {{if eq .HealthStatus "green"}}<span class="badge badge-green">On track</span>
+            {{else if eq .HealthStatus "amber"}}<span class="badge badge-amber">At risk</span>
+            {{else if eq .HealthStatus "red"}}<span class="badge badge-red">Needs attention</span>
+            {{else}}<span class="badge badge-grey">Closed</span>{{end}}
+            {{if .HasPrevious}}{{if eq .HealthMovement "improved"}}<div class="small" style="color:var(--green)">↑ improved</div>{{else if eq .HealthMovement "worsened"}}<div class="small" style="color:var(--red)">↓ worsened</div>{{end}}{{end}}
+          </td>
+          <td>{{stageName .Stage}}</td>
+          <td>{{.DoneTasks}} / {{.TotalTasks}} <span class="muted">({{pct .TaskCompletion}})</span>
+            {{if .HasPrevious}}{{if gt .TaskCompletionDelta 0.0}}<div class="small" style="color:var(--green)">+{{num .TaskCompletionDelta}} points</div>{{else if lt .TaskCompletionDelta 0.0}}<div class="small" style="color:var(--red)">{{num .TaskCompletionDelta}} points</div>{{end}}{{end}}
+          </td>
+          <td>{{.OpenRaidItems}}{{if .HasPrevious}}{{if lt .OpenRaidDelta 0}} <span class="small" style="color:var(--green)">({{.OpenRaidDelta}})</span>{{else if gt .OpenRaidDelta 0}} <span class="small" style="color:var(--red)">(+{{.OpenRaidDelta}})</span>{{end}}{{end}}</td>
+          <td>{{.TotalOverdue}}{{if .HasPrevious}}{{if lt .OverdueDelta 0}} <span class="small" style="color:var(--green)">({{.OverdueDelta}})</span>{{else if gt .OverdueDelta 0}} <span class="small" style="color:var(--red)">(+{{.OverdueDelta}})</span>{{end}}{{end}}</td>
+          <td>{{money .RealisedAnnualValue}}{{if and .HasPrevious (gt .RealisedValueDelta 0.0)}}<div class="small" style="color:var(--green)">+{{money .RealisedValueDelta}}</div>{{end}}</td>
+          <td class="small">{{if .Note}}{{.Note}}{{else}}<span class="muted">—</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <p class="muted small">No status snapshots yet. Capture the first baseline to start seeing changes over time.</p>
+  {{end}}
+</div>
+{{end}}

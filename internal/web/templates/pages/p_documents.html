@@ -1,0 +1,83 @@
+{{define "content"}}
+{{template "project_header" .}}
+{{$p := .Data.P}}
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Upload a file</h2><span class="hint">Stored locally · 50 MB maximum</span></div>
+    <form method="post" action="/projects/{{$p.ID}}/documents/upload" enctype="multipart/form-data">
+      <div class="field">
+        <label for="file">File</label>
+        <input id="file" type="file" name="file" required>
+      </div>
+      <div class="field">
+        <label for="upload_title">Title <span class="hint">optional — filename used when blank</span></label>
+        <input id="upload_title" type="text" name="title" maxlength="200" placeholder="e.g. Approved process map">
+      </div>
+      <div class="field">
+        <label for="upload_description">Description</label>
+        <textarea id="upload_description" name="description" placeholder="What this document contains or evidences"></textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">Upload file</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Add a document link</h2><span class="hint">SharePoint, Teams, intranet, or web</span></div>
+    <form method="post" action="/projects/{{$p.ID}}/documents/link">
+      <div class="field">
+        <label for="link_title">Title</label>
+        <input id="link_title" type="text" name="title" maxlength="200" required placeholder="e.g. Solution design">
+      </div>
+      <div class="field">
+        <label for="url">Web address</label>
+        <input id="url" type="url" name="url" required placeholder="https://…">
+      </div>
+      <div class="field">
+        <label for="link_description">Description</label>
+        <textarea id="link_description" name="description" placeholder="Where the link leads and who owns it"></textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">Add link</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2>Project documents</h2>
+    <span class="hint">Evidence, specifications, quotes, and working documents</span>
+  </div>
+  {{if .Data.Documents}}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Document</th><th>Type</th><th>Added</th><th></th></tr></thead>
+      <tbody>
+      {{range .Data.Documents}}
+        <tr>
+          <td>
+            <b>{{.Title}}</b>
+            {{if .Description}}<div class="small muted">{{.Description}}</div>{{end}}
+            {{if eq .Kind "file"}}<div class="small muted">{{.OriginalName}} · {{printf "%.0f" (kb .SizeBytes)}} KB</div>{{end}}
+          </td>
+          <td><span class="badge badge-grey">{{if eq .Kind "file"}}File{{else}}Link{{end}}</span></td>
+          <td class="small muted" style="white-space:nowrap">{{datetime .CreatedAt}}</td>
+          <td class="actions" style="white-space:nowrap">
+            {{if eq .Kind "file"}}
+              <a class="btn btn-sm" href="/documents/{{.ID}}/download" hx-boost="false" download>Download</a>
+            {{else}}
+              <a class="btn btn-sm" href="{{.URL}}" target="_blank" rel="noopener noreferrer" hx-boost="false">Open link</a>
+            {{end}}
+            <form method="post" action="/documents/{{.ID}}/delete" class="inline-form" onsubmit="return confirm('Remove this document? Uploaded files will be permanently deleted.')">
+              <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+    <div class="empty"><p class="empty-title">No project documents yet</p><p>Upload evidence or link to the authoritative copy held elsewhere.</p></div>
+  {{end}}
+</div>
+{{end}}

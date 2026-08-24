@@ -1,0 +1,44 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1>Risks &amp; issues</h1>
+    <p class="sub">Everything open across active projects, highest severity first.</p>
+  </div>
+</div>
+
+<div class="card">
+  {{if .Data.Risks}}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Ref</th><th>Type</th><th>Item</th><th>Project</th><th>Owner</th><th>Score</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      {{range .Data.Risks}}
+      <tr>
+        <td><span class="ref">{{.Ref}}</span></td>
+        <td>{{raidKindName .Kind}}</td>
+        <td style="max-width:320px">{{.Title}}</td>
+        <td><a href="/projects/{{.ProjectID}}/raid">{{.ProjectCode}}</a></td>
+        <td class="small">{{.Owner}}</td>
+        <td>
+          {{if eq .Severity "high"}}<span class="badge badge-red">{{.Score}}</span>
+          {{else if eq .Severity "medium"}}<span class="badge badge-amber">{{.Score}}</span>
+          {{else}}<span class="badge badge-grey">{{.Score}}</span>{{end}}
+        </td>
+        <td class="small" style="max-width:280px">
+          {{if .Mitigation}}{{truncate 120 .Mitigation}}
+          {{else if eq .Severity "high"}}<span class="badge badge-red">No mitigation</span>
+          {{else}}<span class="muted">—</span>{{end}}
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}
+  <div class="empty">
+    <p class="empty-title">No open risks or issues</p>
+    <p>Either the portfolio is calm, or nobody has looked. Each project's RAID register lives in its workspace.</p>
+  </div>
+  {{end}}
+</div>
+{{end}}

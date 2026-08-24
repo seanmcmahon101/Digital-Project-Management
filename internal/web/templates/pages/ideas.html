@@ -1,0 +1,122 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1>Portfolio &amp; ideas</h1>
+    <p class="sub">Ideas enter the pipeline, get scored, and the best become projects. Scoring stops the loudest voice winning by default.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2>Idea pipeline</h2>
+    <span class="hint">Score = value×3 + alignment×3 + urgency×2 − effort×2 − risk (each 0–5)</span>
+  </div>
+  {{if .Data.Ideas}}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Idea</th><th>From</th><th>Score</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {{range .Data.Ideas}}
+      <tr>
+        <td style="max-width:380px"><b>{{.Title}}</b>
+          {{if .Summary}}<div class="small muted">{{truncate 160 .Summary}}</div>{{end}}</td>
+        <td class="small">{{.SubmittedBy}}</td>
+        <td>
+          {{if .Scored}}
+            <span class="badge {{if ge .Score 20}}badge-green{{else if ge .Score 10}}badge-amber{{else}}badge-grey{{end}}">{{.Score}}</span>
+            <div class="small muted">V{{.ScoreValue}} U{{.ScoreUrgency}} A{{.ScoreAlignment}} E{{.ScoreEffort}} R{{.ScoreRisk}}</div>
+          {{else}}<span class="muted small">not scored</span>{{end}}
+        </td>
+        <td style="white-space:nowrap">
+          {{if eq .Status "new"}}<span class="badge badge-rose">New</span>
+          {{else if eq .Status "scored"}}<span class="badge badge-amber">Scored</span>
+          {{else if eq .Status "approved"}}<span class="badge badge-green">Approved</span>
+          {{else if eq .Status "parked"}}<span class="badge badge-grey">Parked</span>
+          {{else if eq .Status "rejected"}}<span class="badge badge-grey">Rejected</span>
+          {{else}}<span class="badge badge-green">→ Project</span>{{end}}
+        </td>
+        <td class="actions">
+          {{if ne .Status "converted"}}
+          <details class="disclosure" style="margin:0">
+            <summary style="padding:3px 8px;font-size:12px">Manage</summary>
+            <div class="disclosure-body" style="text-align:left;min-width:340px">
+              <form method="post" action="/ideas/{{.ID}}/score">
+                <p class="small mt0" style="font-weight:600;margin-bottom:8px">Score (0–5 each)</p>
+                <div class="form-row">
+                  <div class="field"><label>Business value</label><input type="number" name="value" min="0" max="5" value="{{.ScoreValue}}"></div>
+                  <div class="field"><label>Urgency</label><input type="number" name="urgency" min="0" max="5" value="{{.ScoreUrgency}}"></div>
+                  <div class="field"><label>Strategic fit</label><input type="number" name="alignment" min="0" max="5" value="{{.ScoreAlignment}}"></div>
+                </div>
+                <div class="form-row">
+                  <div class="field"><label>Effort (high = worse)</label><input type="number" name="effort" min="0" max="5" value="{{.ScoreEffort}}"></div>
+                  <div class="field"><label>Risk (high = worse)</label><input type="number" name="risk" min="0" max="5" value="{{.ScoreRisk}}"></div>
+                </div>
+                <button class="btn btn-sm btn-primary" type="submit">Save scores</button>
+              </form>
+              <hr class="divider">
+              <form method="post" action="/ideas/{{.ID}}/convert">
+                <p class="small mt0" style="font-weight:600;margin-bottom:8px">Convert to a project</p>
+                <div class="form-row">
+                  <div class="field"><label>Sponsor</label><input type="text" name="sponsor" placeholder="Who wants this fixed?"></div>
+                  <div class="field"><label>Lead</label><input type="text" name="lead" placeholder="Usually you"></div>
+                </div>
+                <button class="btn btn-sm btn-primary" type="submit">Create project from idea</button>
+              </form>
+              <hr class="divider">
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <form method="post" action="/ideas/{{.ID}}/status">
+                  <button class="btn btn-sm" name="status" value="approved" type="submit">Approve</button>
+                </form>
+                <form method="post" action="/ideas/{{.ID}}/status">
+                  <button class="btn btn-sm" name="status" value="parked" type="submit">Park</button>
+                </form>
+                <form method="post" action="/ideas/{{.ID}}/status">
+                  <button class="btn btn-sm" name="status" value="rejected" type="submit">Reject</button>
+                </form>
+                <form method="post" action="/ideas/{{.ID}}/delete">
+                  <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+                </form>
+              </div>
+            </div>
+          </details>
+          {{else if .ProjectID.Valid}}
+          <a class="btn btn-sm" href="/projects/{{.ProjectID.Int64}}/overview">Open project</a>
+          {{end}}
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}
+  <div class="empty">
+    <p class="empty-title">The pipeline is empty</p>
+    <p>Capture every digitalisation idea here, however rough. Scoring them side by side is how you spend
+    your limited delivery capacity on the ones that matter — not the ones shouted loudest.</p>
+  </div>
+  {{end}}
+
+  <details class="disclosure" {{if not .Data.Ideas}}open{{end}}>
+    <summary>Capture an idea</summary>
+    <div class="disclosure-body">
+      <form method="post" action="/ideas">
+        <div class="form-row">
+          <div class="field" style="grid-column:span 2">
+            <label for="id_title">Idea</label>
+            <input type="text" id="id_title" name="title" required placeholder="e.g. Automate goods-in booking">
+          </div>
+          <div class="field">
+            <label for="id_by">Suggested by</label>
+            <input type="text" id="id_by" name="submitted_by">
+          </div>
+        </div>
+        <div class="field">
+          <label for="id_summary">What problem would it solve?</label>
+          <textarea id="id_summary" name="summary" rows="2" placeholder="A sentence or two — this becomes the draft problem statement if the idea becomes a project"></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">Add to pipeline</button>
+      </form>
+    </div>
+  </details>
+</div>
+{{end}}

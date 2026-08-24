@@ -1,0 +1,76 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1>Reports</h1>
+    <p class="sub">Portfolio summary and printable per-project status reports. Use your browser's print for PDF.</p>
+  </div>
+  <button class="btn no-print" onclick="window.print()">Print this page</button>
+</div>
+
+<div class="stat-row">
+  <div class="stat"><div class="stat-label">Portfolio investment</div><div class="stat-value">{{money .Data.Investment}}</div><div class="stat-note">Best available cost per project</div></div>
+  <div class="stat"><div class="stat-label">Approved budget</div><div class="stat-value">{{money .Data.ApprovedBudget}}</div></div>
+  <div class="stat"><div class="stat-label">Actual cost</div><div class="stat-value">{{money .Data.ActualCost}}</div></div>
+  <div class="stat stat-accent"><div class="stat-label">Expected first-year ROI</div><div class="stat-value">{{if .Data.HasPortfolioROI}}{{pct .Data.PortfolioROI}}{{else}}—{{end}}</div></div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2>Portfolio status — {{date .Data.Today}}</h2>
+  </div>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Project</th><th>Stage</th><th>Health</th><th>Why</th><th>Investment</th><th>ROI / payback</th><th>Target end</th><th>Report</th></tr></thead>
+    <tbody>
+      {{range .Data.Rows}}
+      <tr>
+        <td><b>{{.P.Name}}</b> <span class="ref">{{.P.Code}}</span></td>
+        <td style="white-space:nowrap">{{stageName .P.Stage}}{{if .P.IsClosed}} · {{.P.Status}}{{end}}</td>
+        <td>{{template "health_badge" .Health}}</td>
+        <td class="small" style="max-width:320px">{{.Health.Summary}}</td>
+        <td>{{if .Finance.Investment}}{{money .Finance.Investment}}{{else}}—{{end}}</td>
+        <td style="white-space:nowrap">{{if .Finance.HasROI}}{{pct .Finance.ROI}}{{else}}—{{end}}{{if .Finance.HasPayback}} / {{num .Finance.PaybackMonths}} mo{{end}}</td>
+        <td style="white-space:nowrap">{{date .P.TargetEnd}}</td>
+        <td class="no-print" style="white-space:nowrap">
+          <a class="btn btn-sm" href="/reports/project/{{.P.ID}}">Status report</a>
+          <a class="btn btn-sm" href="/projects/{{.P.ID}}/export/status" hx-boost="false" download title="Download the status report as a PDF">PDF</a>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2>Benefits realisation</h2>
+    <span class="hint">{{money .Data.Realised}} of {{money .Data.Expected}} annualised value realised</span>
+  </div>
+  {{if .Data.Benefits}}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Benefit</th><th>Project</th><th>Baseline</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead>
+    <tbody>
+      {{range .Data.Benefits}}
+      <tr>
+        <td>{{.Name}}</td>
+        <td>{{.ProjectCode}}</td>
+        <td>{{if .HasBaseline}}{{num .BaselineValue.Float64}} {{.Unit}}{{else}}—{{end}}</td>
+        <td>{{if .HasTarget}}{{num .TargetValue.Float64}} {{.Unit}}{{else}}—{{end}}</td>
+        <td>{{with .Latest}}{{num .Value}}{{else}}—{{end}}</td>
+        <td>
+          {{if .Achieved}}<span class="badge badge-green">Achieved</span>
+          {{else if .Latest}}<span class="badge badge-amber">In progress</span>
+          {{else}}<span class="badge badge-grey">Not measured</span>{{end}}
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}
+  <p class="muted small">No benefits defined across the portfolio yet.</p>
+  {{end}}
+</div>
+{{end}}

@@ -1,0 +1,211 @@
+{{define "content"}}
+{{template "project_header" .}}
+{{$p := .Data.P}}
+{{$snap := .Data.Snap}}
+
+<div class="card" style="background:var(--rose-wash);border-color:var(--rose-line)">
+  <p class="small mb0 mt0" style="color:var(--wine)"><b>Baseline → Target → Actual.</b>
+  The baseline is how the process performs <i>today</i> — capture it before you change anything, because it can never be reconstructed afterwards.
+  The target is the promise the project makes. Actuals, measured after go-live, are how you prove the project delivered.</p>
+</div>
+
+{{if $snap.Benefits}}
+{{range $snap.Benefits}}
+<div class="card">
+  <div class="card-head">
+    <h2><span class="ref">{{.Ref}}</span> {{.Name}}</h2>
+    <div class="toolbar">
+      <span class="badge badge-grey">{{.CategoryName}}</span>
+      {{if .Achieved}}<span class="badge badge-green">Target achieved</span>{{end}}
+    </div>
+  </div>
+
+  <div class="stat-row" style="margin-bottom:8px">
+    <div class="stat">
+      <div class="stat-label">Baseline</div>
+      <div class="stat-value" style="font-size:24px">{{if .HasBaseline}}{{num .BaselineValue.Float64}}{{else}}—{{end}}</div>
+      <div class="stat-note">{{.Unit}}{{if .BaselineDate}} · {{date .BaselineDate}}{{end}}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Target ({{if eq .Direction "decrease"}}reduce to{{else}}increase to{{end}})</div>
+      <div class="stat-value" style="font-size:24px">{{if .HasTarget}}{{num .TargetValue.Float64}}{{else}}—{{end}}</div>
+      <div class="stat-note">{{.Unit}}{{if .AnnualValue}} · worth {{money .AnnualValue}}/yr{{end}}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Latest actual</div>
+      <div class="stat-value" style="font-size:24px">{{with .Latest}}{{num .Value}}{{else}}—{{end}}</div>
+      <div class="stat-note">{{with .Latest}}{{date .MeasuredAt}}{{else}}not yet measured{{end}}</div>
+    </div>
+  </div>
+
+  {{$prog := progressOf .}}
+  {{if $prog.OK}}
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+    <div class="progress" style="flex:1">
+      <span class="{{if ge $prog.Pct 100.0}}p-green{{else if lt $prog.Pct 34.0}}p-amber{{end}}" style="width:{{printf "%.0f" (clamp100 $prog.Pct)}}%"></span>
+    </div>
+    <span class="small muted" style="white-space:nowrap">{{printf "%.0f" $prog.Pct}}% of the way to target</span>
+  </div>
+  {{end}}
+
+  {{if .Notes}}<p class="small muted">{{.Notes}}</p>{{end}}
+
+  {{if .Measurements}}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Measured</th><th>Value</th><th>Notes</th><th></th></tr></thead>
+    <tbody>
+      {{range .Measurements}}
+      <tr>
+        <td style="white-space:nowrap">{{date .MeasuredAt}}</td>
+        <td>{{num .Value}}</td>
+        <td class="small muted">{{.Notes}}</td>
+        <td class="actions">
+          <form method="post" action="/measurements/{{.ID}}/delete">
+            <input type="hidden" name="back" value="/projects/{{$p.ID}}/benefits">
+            <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{end}}
+
+  <div class="toolbar" style="margin-top:10px">
+    <details class="disclosure" style="margin:0">
+      <summary>Record a measurement</summary>
+      <div class="disclosure-body">
+        <form method="post" action="/benefits/{{.ID}}/measure">
+          <input type="hidden" name="back" value="/projects/{{$p.ID}}/benefits">
+          <div class="form-row">
+            <div class="field">
+              <label>Measured value ({{.Unit}})</label>
+              <input type="number" step="any" name="value" required>
+            </div>
+            <div class="field">
+              <label>Date measured</label>
+              <input type="date" name="measured_at" value="{{today}}">
+            </div>
+            <div class="field">
+              <label>Notes</label>
+              <input type="text" name="notes" placeholder="How it was measured, anything unusual">
+            </div>
+          </div>
+          <button class="btn btn-primary" type="submit">Record measurement</button>
+        </form>
+      </div>
+    </details>
+    <details class="disclosure" style="margin:0">
+      <summary>Edit benefit</summary>
+      <div class="disclosure-body">
+        <form method="post" action="/benefits/{{.ID}}/update">
+          <input type="hidden" name="back" value="/projects/{{$p.ID}}/benefits">
+          <div class="form-row">
+            <div class="field" style="grid-column:span 2"><label>Name</label><input type="text" name="name" value="{{.Name}}" required></div>
+            <div class="field"><label>Category</label>
+              <select name="category">
+                {{$cat := .Category}}
+                {{range benefitCategories}}<option value="{{.}}" {{if eq . $cat}}selected{{end}}>{{benefitCategoryName .}}</option>{{end}}
+              </select></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Unit</label><input type="text" name="unit" value="{{.Unit}}" placeholder="hrs/month, %, days…"></div>
+            <div class="field"><label>Direction</label>
+              <select name="direction">
+                <option value="decrease" {{if eq .Direction "decrease"}}selected{{end}}>Lower is better</option>
+                <option value="increase" {{if eq .Direction "increase"}}selected{{end}}>Higher is better</option>
+              </select></div>
+            <div class="field"><label>Baseline value</label><input type="number" step="any" name="baseline_value" value="{{if .HasBaseline}}{{.BaselineValue.Float64}}{{end}}"></div>
+            <div class="field"><label>Baseline date</label><input type="date" name="baseline_date" value="{{.BaselineDate}}"></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Target value</label><input type="number" step="any" name="target_value" value="{{if .HasTarget}}{{.TargetValue.Float64}}{{end}}"></div>
+            <div class="field"><label>Annual value if achieved ({{$.Currency}})</label><input type="number" step="any" name="annual_value" value="{{.AnnualValue}}"></div>
+          </div>
+          <div class="field"><label>Notes / how it is measured</label><textarea name="notes" rows="2">{{.Notes}}</textarea></div>
+          <div class="form-actions">
+            <button class="btn btn-primary" type="submit">Save</button>
+          </div>
+        </form>
+        <form method="post" action="/benefits/{{.ID}}/delete" style="margin-top:8px">
+          <input type="hidden" name="back" value="/projects/{{$p.ID}}/benefits">
+          <button class="btn btn-sm btn-danger" type="submit">Delete benefit</button>
+        </form>
+      </div>
+    </details>
+  </div>
+</div>
+{{end}}
+{{else}}
+<div class="card">
+  <div class="empty">
+    <p class="empty-title">No benefits defined</p>
+    <p>If the project can't name a measurable benefit, it isn't ready to be funded.
+    Good candidates: hours saved per month, error rate, cycle time, reporting delay, adoption rate.</p>
+  </div>
+</div>
+{{end}}
+
+<div class="card">
+  <details class="disclosure" {{if not $snap.Benefits}}open{{end}} style="margin-top:0">
+    <summary>Define a benefit</summary>
+    <div class="disclosure-body">
+      <form method="post" action="/projects/{{$p.ID}}/benefits">
+        <input type="hidden" name="back" value="/projects/{{$p.ID}}/benefits">
+        <div class="form-row">
+          <div class="field" style="grid-column:span 2">
+            <label for="bn_name">Benefit</label>
+            <input type="text" id="bn_name" name="name" required placeholder="e.g. Team leader re-keying time">
+          </div>
+          <div class="field">
+            <label for="bn_cat">Category</label>
+            <select id="bn_cat" name="category">
+              {{range benefitCategories}}<option value="{{.}}">{{benefitCategoryName .}}</option>{{end}}
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="bn_unit">Unit</label>
+            <input type="text" id="bn_unit" name="unit" placeholder="hrs/month, %, days…">
+          </div>
+          <div class="field">
+            <label for="bn_dir">Direction</label>
+            <select id="bn_dir" name="direction">
+              <option value="decrease">Lower is better</option>
+              <option value="increase">Higher is better</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="bn_base">Baseline (today's value)</label>
+            <input type="number" step="any" id="bn_base" name="baseline_value">
+            <p class="help">Leave blank if not yet measured — but measure it before designing the solution.</p>
+          </div>
+          <div class="field">
+            <label for="bn_basedate">Baseline date</label>
+            <input type="date" id="bn_basedate" name="baseline_date" value="{{today}}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="bn_target">Target value</label>
+            <input type="number" step="any" id="bn_target" name="target_value">
+          </div>
+          <div class="field">
+            <label for="bn_annual">Annual value if achieved ({{.Currency}})</label>
+            <input type="number" step="any" id="bn_annual" name="annual_value" value="0">
+            <p class="help">e.g. hours saved × loaded hourly rate × 12</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="bn_notes">How will it be measured?</label>
+          <textarea id="bn_notes" name="notes" rows="2" placeholder="Where the number comes from, so the after-measurement uses the same method"></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">Define benefit</button>
+      </form>
+    </div>
+  </details>
+</div>
+{{end}}

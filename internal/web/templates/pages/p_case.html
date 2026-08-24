@@ -1,0 +1,220 @@
+{{define "content"}}
+{{template "project_header" .}}
+{{$p := .Data.P}}
+{{$snap := .Data.Snap}}
+{{$fin := .Data.Financials}}
+
+<div class="grid grid-main-side">
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <h2>Business case</h2>
+        <a class="btn btn-sm" href="/projects/{{$p.ID}}/export/case" hx-boost="false" download>
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8m0 0L5 7m3 3 3-3M3 13.5h10"/></svg>
+          Export as PDF</a>
+      </div>
+      <p class="small muted" style="margin-top:-6px">The PDF pulls together the problem, pain-point evidence, benefits, scope and key requirements into a document ready to hand to a sponsor or the CEO.</p>
+      <form method="post" action="/projects/{{$p.ID}}/update">
+        <input type="hidden" name="back" value="/projects/{{$p.ID}}/case">
+        <div class="field">
+          <textarea name="business_case" rows="8"
+            placeholder="A good structure: 1) What the problem costs today (hours, errors, delays — use the baseline). 2) The proposed solution in one paragraph. 3) One-off and ongoing costs. 4) Expected annual benefit and payback period. 5) What happens if we do nothing.">{{$p.BusinessCase}}</textarea>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">Save</button></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Project financials</h2>
+        <span class="hint">Return is calculated from the benefits register</span>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="stat-label">Expected annual value</div><div class="stat-value">{{money $fin.ExpectedAnnualValue}}</div></div>
+        <div class="stat"><div class="stat-label">First-year ROI</div><div class="stat-value">{{if $fin.HasROI}}{{pct $fin.ROI}}{{else}}—{{end}}</div></div>
+        <div class="stat"><div class="stat-label">Simple payback</div><div class="stat-value">{{if $fin.HasPayback}}{{num $fin.PaybackMonths}} mo{{else}}—{{end}}</div></div>
+      </div>
+      <form method="post" action="/projects/{{$p.ID}}/financials">
+        <div class="form-row">
+          <div class="field">
+            <label for="estimated_cost">Estimated cost ({{$.Currency}})</label>
+            <input type="number" min="0" step="0.01" id="estimated_cost" name="estimated_cost" value="{{$fin.Financials.EstimatedCost}}">
+          </div>
+          <div class="field">
+            <label for="approved_budget">Approved budget ({{$.Currency}})</label>
+            <input type="number" min="0" step="0.01" id="approved_budget" name="approved_budget" value="{{$fin.Financials.ApprovedBudget}}">
+          </div>
+          <div class="field">
+            <label for="actual_cost">Actual cost ({{$.Currency}})</label>
+            <input type="number" min="0" step="0.01" id="actual_cost" name="actual_cost" value="{{$fin.Financials.ActualCost}}">
+          </div>
+        </div>
+        <div class="field">
+          <label for="financial_notes">Cost assumptions and notes</label>
+          <textarea id="financial_notes" name="financial_notes" rows="3" maxlength="2000" placeholder="What is included, excluded, or still uncertain?">{{$fin.Financials.Notes}}</textarea>
+        </div>
+        <p class="small muted">Investment uses actual cost when available, otherwise approved budget, then estimated cost. First-year ROI = (annual value − investment) ÷ investment.</p>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">Save financials</button></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Structured scope</h2>
+        <span class="hint">Give each boundary an owner and a clear acceptance test</span>
+      </div>
+
+      {{if $snap.ScopeItems}}
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Ref</th><th>Boundary</th><th>Scope item</th><th>Owner</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+          {{range $snap.ScopeItems}}
+            <tr>
+              <td><span class="ref">{{.Ref}}</span></td>
+              <td>{{if eq .Classification "in"}}<span class="badge badge-green">In scope</span>{{else}}<span class="badge badge-red">Out</span>{{end}}</td>
+              <td>
+                <b>{{.Title}}</b>
+                {{if .Rationale}}<div class="small muted">Why: {{.Rationale}}</div>{{end}}
+                {{if .AcceptanceCriteria}}<div class="small muted">Accepted when: {{.AcceptanceCriteria}}</div>{{end}}
+                <details class="disclosure" style="margin-top:8px">
+                  <summary>Edit</summary>
+                  <div class="disclosure-body">
+                    <form method="post" action="/scope/{{.ID}}/update">
+                      <input type="hidden" name="back" value="/projects/{{$p.ID}}/case">
+                      <div class="form-row">
+                        <div class="field"><label>Boundary</label><select name="classification"><option value="in" {{if eq .Classification "in"}}selected{{end}}>In scope</option><option value="out" {{if eq .Classification "out"}}selected{{end}}>Out of scope</option></select></div>
+                        <div class="field"><label>Status</label><select name="status"><option value="proposed" {{if eq .Status "proposed"}}selected{{end}}>Proposed</option><option value="agreed" {{if eq .Status "agreed"}}selected{{end}}>Agreed</option><option value="delivered" {{if eq .Status "delivered"}}selected{{end}}>Delivered</option><option value="removed" {{if eq .Status "removed"}}selected{{end}}>Removed</option></select></div>
+                      </div>
+                      <div class="field"><label>Scope item</label><input name="title" value="{{.Title}}" required></div>
+                      <div class="field"><label>Owner</label><input name="owner" value="{{.Owner}}"></div>
+                      <div class="field"><label>Rationale</label><textarea name="rationale" rows="2">{{.Rationale}}</textarea></div>
+                      <div class="field"><label>Acceptance criteria</label><textarea name="acceptance_criteria" rows="2">{{.AcceptanceCriteria}}</textarea></div>
+                      <button class="btn btn-primary btn-sm" type="submit">Save item</button>
+                    </form>
+                  </div>
+                </details>
+              </td>
+              <td class="small">{{.Owner}}</td>
+              <td>{{if eq .Status "agreed"}}<span class="badge badge-green">Agreed</span>{{else if eq .Status "delivered"}}<span class="badge badge-green">Delivered</span>{{else if eq .Status "removed"}}<span class="badge badge-grey">Removed</span>{{else}}<span class="badge badge-amber">Proposed</span>{{end}}</td>
+              <td class="actions"><form method="post" action="/scope/{{.ID}}/delete"><input type="hidden" name="back" value="/projects/{{$p.ID}}/case"><button class="btn btn-sm btn-danger" type="submit">Delete</button></form></td>
+            </tr>
+          {{end}}
+          </tbody>
+        </table>
+      </div>
+      {{else}}
+      <p class="muted small">No structured scope items yet. Existing summary text below is retained for compatibility; add individual items to make scope governable.</p>
+      {{end}}
+
+      <details class="disclosure" open>
+        <summary>Add a scope item</summary>
+        <div class="disclosure-body">
+          <form method="post" action="/projects/{{$p.ID}}/scope">
+            <input type="hidden" name="back" value="/projects/{{$p.ID}}/case">
+            <div class="form-row">
+              <div class="field"><label for="scope_class">Boundary</label><select id="scope_class" name="classification"><option value="in">In scope</option><option value="out">Out of scope</option></select></div>
+              <div class="field"><label for="scope_status">Status</label><select id="scope_status" name="status"><option value="proposed">Proposed</option><option value="agreed">Agreed</option></select></div>
+            </div>
+            <div class="field"><label for="scope_title">Scope item</label><input id="scope_title" name="title" required placeholder="A specific deliverable, process, team or boundary"></div>
+            <div class="field"><label for="scope_owner">Owner</label><input id="scope_owner" name="owner" placeholder="Person accountable for agreeing or accepting this item"></div>
+            <div class="field"><label for="scope_rationale">Rationale</label><textarea id="scope_rationale" name="rationale" rows="2" placeholder="Why this is inside or outside the project boundary"></textarea></div>
+            <div class="field"><label for="scope_accept">Acceptance criteria</label><textarea id="scope_accept" name="acceptance_criteria" rows="2" placeholder="How everyone will know this item is complete or respected"></textarea></div>
+            <button class="btn btn-primary" type="submit">Add scope item</button>
+          </form>
+        </div>
+      </details>
+
+      <details class="disclosure">
+        <summary>Legacy scope summary</summary>
+        <div class="disclosure-body">
+      <form method="post" action="/projects/{{$p.ID}}/update">
+        <input type="hidden" name="back" value="/projects/{{$p.ID}}/case">
+        <div class="grid grid-2">
+          <div class="field">
+            <label for="scope_in">In scope</label>
+            <textarea id="scope_in" name="scope_in" rows="6" placeholder="One item per line">{{$p.ScopeIn}}</textarea>
+          </div>
+          <div class="field">
+            <label for="scope_out">Out of scope</label>
+            <textarea id="scope_out" name="scope_out" rows="6" placeholder="Write down what you will NOT do — it prevents arguments later">{{$p.ScopeOut}}</textarea>
+          </div>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">Save</button></div>
+      </form>
+        </div>
+      </details>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Scope baseline approval</h2><span class="hint">Each approval creates an immutable version</span></div>
+      {{if $snap.ScopeBaselines}}
+      <table class="table">
+        <thead><tr><th>Version</th><th>Approved by</th><th>Date</th><th>Notes</th></tr></thead>
+        <tbody>{{range $snap.ScopeBaselines}}<tr><td><span class="ref">v{{.Version}}</span></td><td>{{.ApprovedBy}}</td><td>{{date .ApprovedAt}}</td><td class="small muted">{{.Notes}}{{if .Items}}<details class="disclosure"><summary>{{len .Items}} snapshotted items</summary><div class="disclosure-body">{{range .Items}}<div><span class="ref">{{.Ref}}</span> {{if eq .Classification "in"}}In{{else}}Out{{end}} · {{.Title}} · {{.Status}}</div>{{end}}</div></details>{{end}}</td></tr>{{end}}</tbody>
+      </table>
+      {{else}}<p class="muted small">No approved baseline yet. Approval records the current structured items and the legacy summary as a versioned snapshot.</p>{{end}}
+      <details class="disclosure">
+        <summary>Approve current scope as a new baseline</summary>
+        <div class="disclosure-body">
+          <form method="post" action="/projects/{{$p.ID}}/scope/baselines">
+            <input type="hidden" name="back" value="/projects/{{$p.ID}}/case">
+            <div class="form-row">
+              <div class="field"><label for="scope_approver">Approved by</label><input id="scope_approver" name="approved_by" value="{{$p.Sponsor}}" required></div>
+              <div class="field"><label for="scope_approved_at">Approval date</label><input id="scope_approved_at" name="approved_at" type="date" required></div>
+            </div>
+            <div class="field"><label for="scope_approval_notes">Approval notes</label><textarea id="scope_approval_notes" name="notes" rows="2" placeholder="Meeting, decision or conditions of approval"></textarea></div>
+            <button class="btn btn-primary" type="submit">Approve new baseline</button>
+          </form>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Expected benefits</h2></div>
+      {{if $snap.Benefits}}
+      <table class="table"><tbody>
+        {{range $snap.Benefits}}
+        <tr>
+          <td>
+            <span class="ref">{{.Ref}}</span> {{.Name}}
+            <div class="small muted">
+              {{if .HasBaseline}}{{num .BaselineValue.Float64}}{{else}}?{{end}}
+              → {{if .HasTarget}}{{num .TargetValue.Float64}}{{else}}<b style="color:var(--amber)">no target</b>{{end}} {{.Unit}}
+              {{if .AnnualValue}} · {{money .AnnualValue}}/yr{{end}}
+            </div>
+          </td>
+        </tr>
+        {{end}}
+      </tbody></table>
+      <p class="small"><a href="/projects/{{$p.ID}}/benefits">Set baselines and targets →</a></p>
+      {{else}}
+      <p class="muted small">A business case needs a measurable benefit. <a href="/projects/{{$p.ID}}/benefits">Define the first benefit →</a></p>
+      {{end}}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Requirements</h2></div>
+      {{if $snap.Requirements}}
+      <p class="small muted">{{len $snap.Requirements}} captured. <a href="/projects/{{$p.ID}}/requirements">Review and prioritise →</a></p>
+      {{else}}
+      <p class="muted small">No requirements yet. Start from the pain points found in Discovery. <a href="/projects/{{$p.ID}}/requirements">Capture requirements →</a></p>
+      {{end}}
+    </div>
+
+    <div class="coach">
+      <div class="coach-head">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M8 5v3.5l2.4 1.5"/></svg>
+        Common mistakes here
+      </div>
+      <ul class="small" style="margin:0;padding-left:16px;color:var(--ink-2)">
+        <li style="margin-bottom:6px"><b>Benefits with no numbers.</b> “Improved visibility” is not a benefit — “status available in minutes instead of a day” is.</li>
+        <li style="margin-bottom:6px"><b>Ignoring the cost of doing nothing.</b> That is what the sponsor is actually comparing against.</li>
+        <li><b>No out-of-scope list.</b> Every project accretes wishes. Decide now what this project will not do.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{{end}}

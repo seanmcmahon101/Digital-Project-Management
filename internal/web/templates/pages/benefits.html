@@ -1,0 +1,69 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1>Benefits</h1>
+    <p class="sub">Baseline → Target → Actual across the whole portfolio. This page is why the projects exist.</p>
+  </div>
+</div>
+
+<div class="stat-row">
+  <div class="stat stat-accent">
+    <div class="stat-label">Annualised benefit realised</div>
+    <div class="stat-value">{{money .Data.Realised}}</div>
+    <div class="stat-note">of {{money .Data.Expected}} expected</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Hours saved per month</div>
+    <div class="stat-value">{{num .Data.HoursMonthly}}</div>
+    <div class="stat-note">measured</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Targets achieved</div>
+    <div class="stat-value">{{.Data.Achieved}}</div>
+    <div class="stat-note">of {{len .Data.Benefits}} benefits</div>
+  </div>
+</div>
+
+<div class="card">
+  {{if .Data.Benefits}}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Benefit</th><th>Project</th><th>Baseline</th><th>Target</th><th>Latest actual</th><th>Progress</th><th>Value/yr</th></tr></thead>
+    <tbody>
+      {{range .Data.Benefits}}
+      <tr>
+        <td><span class="ref">{{.Ref}}</span> {{.Name}}
+          <div class="small muted">{{.CategoryName}}</div></td>
+        <td><a href="/projects/{{.ProjectID}}/benefits">{{.ProjectCode}}</a></td>
+        <td style="white-space:nowrap">{{if .HasBaseline}}{{num .BaselineValue.Float64}} {{.Unit}}{{else}}<span class="badge badge-amber">none</span>{{end}}</td>
+        <td style="white-space:nowrap">{{if .HasTarget}}{{num .TargetValue.Float64}} {{.Unit}}{{else}}<span class="badge badge-amber">none</span>{{end}}</td>
+        <td style="white-space:nowrap">
+          {{with .Latest}}{{num .Value}} <span class="small muted">{{date .MeasuredAt}}</span>
+          {{else}}<span class="muted small">not measured</span>{{end}}
+        </td>
+        <td style="min-width:120px">
+          {{$prog := progressOf .}}
+          {{if $prog.OK}}
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="progress" style="flex:1">
+              <span class="{{if .Achieved}}p-green{{end}}" style="width:{{printf "%.0f" (clamp100 $prog.Pct)}}%"></span>
+            </div>
+            <span class="small muted">{{printf "%.0f" $prog.Pct}}%</span>
+          </div>
+          {{else}}<span class="muted small">—</span>{{end}}
+        </td>
+        <td style="white-space:nowrap">{{if .AnnualValue}}{{money .AnnualValue}}{{else}}<span class="muted">—</span>{{end}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}
+  <div class="empty">
+    <p class="empty-title">No benefits defined yet</p>
+    <p>Benefits are defined inside each project — with a baseline captured during Discovery, a target set in Define,
+    and actuals measured after go-live. That chain is how a project proves it delivered value.</p>
+  </div>
+  {{end}}
+</div>
+{{end}}

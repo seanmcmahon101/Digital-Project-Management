@@ -1,0 +1,197 @@
+{{define "content"}}
+{{template "project_header" .}}
+{{$p := .Data.P}}
+{{$snap := .Data.Snap}}
+
+<div class="card">
+  <div class="card-head">
+    <h2>Requirements</h2>
+    <span class="hint">MoSCoW-prioritised, each traceable to a test. When everything is a must, nothing is.</span>
+  </div>
+  {{if $snap.Requirements}}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Ref</th><th>Requirement</th><th>Priority</th><th>Source</th><th>Status</th><th>Testing</th><th></th></tr></thead>
+    <tbody>
+      {{range $snap.Requirements}}
+      <tr>
+        <td><span class="ref">{{.Ref}}</span></td>
+        <td>{{.Title}}{{if .Detail}}<div class="small muted">{{truncate 130 .Detail}}</div>{{end}}</td>
+        <td style="white-space:nowrap">
+          {{if eq .Moscow "must"}}<span class="badge badge-red">Must</span>
+          {{else if eq .Moscow "should"}}<span class="badge badge-amber">Should</span>
+          {{else if eq .Moscow "could"}}<span class="badge badge-grey">Could</span>
+          {{else}}<span class="badge badge-grey">Won't</span>{{end}}
+        </td>
+        <td class="small">{{.Source}}</td>
+        <td>{{.Status}}</td>
+        <td style="white-space:nowrap">
+          {{$sum := .TestSummary}}
+          {{if eq $sum "untested"}}<span class="badge badge-amber">Untested</span>
+          {{else if eq $sum "failing"}}<span class="badge badge-red">Failing</span>
+          {{else if eq $sum "passing"}}<span class="badge badge-green">Passing</span>
+          {{else}}<span class="badge badge-grey">In progress</span>{{end}}
+          <div class="small muted">{{len .Tests}} test{{if ne (len .Tests) 1}}s{{end}}</div>
+        </td>
+        <td class="actions">
+          <details class="disclosure" style="margin:0">
+            <summary style="padding:3px 8px;font-size:12px">Edit</summary>
+            <div class="disclosure-body" style="text-align:left;min-width:320px">
+              <form method="post" action="/requirements/{{.ID}}/update">
+                <input type="hidden" name="back" value="/projects/{{$p.ID}}/requirements">
+                <div class="field"><label>Title</label><input type="text" name="title" value="{{.Title}}" required></div>
+                <div class="field"><label>Detail</label><textarea name="detail" rows="2">{{.Detail}}</textarea></div>
+                <div class="form-row">
+                  <div class="field"><label>Priority</label>
+                    <select name="moscow">
+                      <option value="must" {{if eq .Moscow "must"}}selected{{end}}>Must have</option>
+                      <option value="should" {{if eq .Moscow "should"}}selected{{end}}>Should have</option>
+                      <option value="could" {{if eq .Moscow "could"}}selected{{end}}>Could have</option>
+                      <option value="wont" {{if eq .Moscow "wont"}}selected{{end}}>Won't have</option>
+                    </select></div>
+                  <div class="field"><label>Status</label>
+                    <select name="status">
+                      <option value="proposed" {{if eq .Status "proposed"}}selected{{end}}>Proposed</option>
+                      <option value="approved" {{if eq .Status "approved"}}selected{{end}}>Approved</option>
+                      <option value="delivered" {{if eq .Status "delivered"}}selected{{end}}>Delivered</option>
+                      <option value="dropped" {{if eq .Status "dropped"}}selected{{end}}>Dropped</option>
+                    </select></div>
+                  <div class="field"><label>Source</label><input type="text" name="source" value="{{.Source}}"></div>
+                </div>
+                <div class="form-actions"><button class="btn btn-sm btn-primary" type="submit">Save</button></div>
+              </form>
+              <form method="post" action="/requirements/{{.ID}}/delete" style="margin-top:6px">
+                <input type="hidden" name="back" value="/projects/{{$p.ID}}/requirements">
+                <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+              </form>
+            </div>
+          </details>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}
+  <div class="empty">
+    <p class="empty-title">No requirements yet</p>
+    <p>Requirements turn vague hopes into things you can build and test. Start from the pain points:
+    each one usually implies a requirement. Prioritise with MoSCoW so everyone knows what is essential.</p>
+  </div>
+  {{end}}
+  <details class="disclosure" {{if not $snap.Requirements}}open{{end}}>
+    <summary>Add a requirement</summary>
+    <div class="disclosure-body">
+      <form method="post" action="/projects/{{$p.ID}}/requirements">
+        <input type="hidden" name="back" value="/projects/{{$p.ID}}/requirements">
+        <div class="field">
+          <label for="rq_title">Requirement</label>
+          <input type="text" id="rq_title" name="title" required placeholder="e.g. Book operation complete with quantity by barcode scan">
+        </div>
+        <div class="field">
+          <label for="rq_detail">Detail</label>
+          <textarea id="rq_detail" name="detail" rows="2" placeholder="Specific enough that someone could write a test for it"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="rq_moscow">Priority</label>
+            <select id="rq_moscow" name="moscow">
+              <option value="must">Must have</option>
+              <option value="should">Should have</option>
+              <option value="could">Could have</option>
+              <option value="wont">Won't have (this time)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="rq_source">Source</label>
+            <input type="text" id="rq_source" name="source" placeholder="Which stakeholder or pain point?">
+          </div>
+        </div>
+        <button class="btn btn-primary" type="submit">Add requirement</button>
+      </form>
+    </div>
+  </details>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2>Tests</h2>
+    <span class="hint">Each test proves a requirement works — an untested requirement is an unverified promise</span>
+  </div>
+  {{if $snap.Tests}}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Ref</th><th>Test</th><th>Proves</th><th>Result</th><th>Record result</th><th></th></tr></thead>
+    <tbody>
+      {{range $snap.Tests}}
+      <tr>
+        <td><span class="ref">{{.Ref}}</span></td>
+        <td>{{.Name}}
+          {{if .Steps}}<div class="small muted">Steps: {{truncate 100 .Steps}}</div>{{end}}
+          {{if .Expected}}<div class="small muted">Expect: {{truncate 100 .Expected}}</div>{{end}}
+          {{if .Notes}}<div class="small muted">Notes: {{truncate 100 .Notes}}</div>{{end}}
+        </td>
+        <td>{{if .RequirementRef}}<span class="ref">{{.RequirementRef}}</span>{{else}}<span class="muted small">unlinked</span>{{end}}</td>
+        <td style="white-space:nowrap">
+          {{if eq .Status "pass"}}<span class="badge badge-green">Pass</span>
+          {{else if eq .Status "fail"}}<span class="badge badge-red">Fail</span>
+          {{else if eq .Status "blocked"}}<span class="badge badge-amber">Blocked</span>
+          {{else}}<span class="badge badge-grey">Not run</span>{{end}}
+          {{if .TestedAt}}<div class="small muted">{{date .TestedAt}}{{if .TestedBy}} · {{.TestedBy}}{{end}}</div>{{end}}
+        </td>
+        <td>
+          <form method="post" action="/tests/{{.ID}}/status" style="display:flex;gap:4px;flex-wrap:wrap">
+            <input type="hidden" name="back" value="/projects/{{$p.ID}}/requirements">
+            <button class="btn btn-sm" name="status" value="pass" type="submit">Pass</button>
+            <button class="btn btn-sm" name="status" value="fail" type="submit">Fail</button>
+            <button class="btn btn-sm" name="status" value="blocked" type="submit">Blocked</button>
+          </form>
+        </td>
+        <td class="actions">
+          <form method="post" action="/tests/{{.ID}}/delete">
+            <input type="hidden" name="back" value="/projects/{{$p.ID}}/requirements">
+            <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}
+  <p class="muted small" style="margin-bottom:4px">No tests yet. Write one per must-have requirement as a minimum — the Build &amp; Test gate checks this.</p>
+  {{end}}
+  <details class="disclosure">
+    <summary>Add a test</summary>
+    <div class="disclosure-body">
+      <form method="post" action="/projects/{{$p.ID}}/tests">
+        <input type="hidden" name="back" value="/projects/{{$p.ID}}/requirements">
+        <div class="form-row">
+          <div class="field" style="grid-column:span 2">
+            <label for="ts_name">Test name</label>
+            <input type="text" id="ts_name" name="name" required placeholder="e.g. Scan and book good quantity at Cell 2 lathe">
+          </div>
+          <div class="field">
+            <label for="ts_req">Proves requirement</label>
+            <select id="ts_req" name="requirement_id">
+              <option value="0">— unlinked —</option>
+              {{range $snap.Requirements}}<option value="{{.ID}}">{{.Ref}} · {{truncate 50 .Title}}</option>{{end}}
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="ts_steps">Steps</label>
+            <textarea id="ts_steps" name="steps" rows="2"></textarea>
+          </div>
+          <div class="field">
+            <label for="ts_expected">Expected result</label>
+            <textarea id="ts_expected" name="expected" rows="2"></textarea>
+          </div>
+        </div>
+        <button class="btn btn-primary" type="submit">Add test</button>
+      </form>
+    </div>
+  </details>
+</div>
+{{end}}

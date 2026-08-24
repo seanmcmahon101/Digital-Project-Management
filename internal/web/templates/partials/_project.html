@@ -1,0 +1,137 @@
+{{/* Project workspace header: title, health, meta, stage stepper, tabs.
+     Expects the full page view (.Data has P, Snap, Health, Gate, Tab, StageTabs). */}}
+{{define "project_header"}}
+{{$p := .Data.P}}
+{{$health := .Data.Health}}
+{{$tab := .Data.Tab}}
+<div class="crumbs"><a href="/projects">Projects</a> / {{$p.Code}}</div>
+<div class="project-head">
+  <div class="project-head-top">
+    <h1>{{$p.Name}}</h1>
+    <span class="ref">{{$p.Code}}</span>
+    {{template "health_badge" $health}}
+    {{if eq $p.Status "on_hold"}}<span class="badge badge-grey">On hold</span>{{end}}
+    {{if eq $p.Status "closed"}}<span class="badge badge-grey">Closed {{date $p.ClosedAt}}</span>{{end}}
+    {{if eq $p.Status "cancelled"}}<span class="badge badge-grey">Cancelled</span>{{end}}
+    <span class="spacer"></span>
+    <details class="disclosure export-menu">
+      <summary>Export</summary>
+      <div class="export-menu-body">
+        <a href="/projects/{{$p.ID}}/export/status" hx-boost="false" download>Status report (PDF)</a>
+        <a href="/projects/{{$p.ID}}/export/case" hx-boost="false" download>Business case (PDF)</a>
+        <a href="/reports/project/{{$p.ID}}">Status report (web view)</a>
+      </div>
+    </details>
+  </div>
+  <div class="project-meta">
+    <span>Sponsor <b>{{if $p.Sponsor}}{{$p.Sponsor}}{{else}}—{{end}}</b></span>
+    <span>Lead <b>{{if $p.Lead}}{{$p.Lead}}{{else}}—{{end}}</b></span>
+    <span>Target end <b>{{date $p.TargetEnd}}</b></span>
+    {{if $p.GoLive}}<span>Go-live <b>{{date $p.GoLive}}</b></span>{{end}}
+  </div>
+  <div class="stepper">
+    {{$cur := stageIdx $p.Stage}}
+    {{range $i, $stage := stages}}
+      <div class="step {{if lt $i $cur}}done{{else if eq $i $cur}}current{{end}}">{{stageName $stage}}</div>
+    {{end}}
+  </div>
+  <nav class="tabs">
+    {{$tabs := .Data.StageTabs}}
+    {{template "tab_link" dict "P" $p "Tab" $tab "Slug" "overview" "Label" "Overview" "Hot" $tabs}}
+    {{template "tab_link" dict "P" $p "Tab" $tab "Slug" "discovery" "Label" "Discovery" "Hot" $tabs}}
+    {{template "tab_link" dict "P" $p "Tab" $tab "Slug" "case" "Label" "Business case" "Hot" $tabs}}
+    {{template "tab_link" dict "P" $p "Tab" $tab "Slug" "plan" "Label" "Plan" "Hot" $tabs}}
+    {{template "tab_link" dict "P" $p "Tab" $tab "Slug" "board" "Label" "Board" "Hot" $tabs}}
+    {{template "tab_link" dict "P" $p "Tab" $tab "Slug" "requirements" "Label" "Requirements" "Hot" $tabs}}
+    {{template "tab_link" dict "P" $p "Tab" $tab "Slug" "raid" "Label" "RAID" "Hot" $tabs}}
+    {{template "tab_link" dict "P" $p "Tab" $tab "Slug" "people" "Label" "People" "Hot" $tabs}}
+    {{template "tab_link" dict "P" $p "Tab" $tab "Slug" "decisions" "Label" "Decisions" "Hot" $tabs}}
+    {{template "tab_link" dict "P" $p "Tab" $tab "Slug" "changes" "Label" "Changes" "Hot" $tabs}}
+    {{template "tab_link" dict "P" $p "Tab" $tab "Slug" "documents" "Label" "Documents" "Hot" $tabs}}
+    {{template "tab_link" dict "P" $p "Tab" $tab "Slug" "implementation" "Label" "Implementation" "Hot" $tabs}}
+    {{template "tab_link" dict "P" $p "Tab" $tab "Slug" "benefits" "Label" "Benefits" "Hot" $tabs}}
+    {{template "tab_link" dict "P" $p "Tab" $tab "Slug" "close" "Label" "Close" "Hot" $tabs}}
+    {{template "tab_link" dict "P" $p "Tab" $tab "Slug" "activity" "Label" "Activity" "Hot" $tabs}}
+  </nav>
+</div>
+{{end}}
+
+{{define "tab_link"}}
+<a href="/projects/{{.P.ID}}/{{.Slug}}" {{if eq .Tab .Slug}}class="active"{{end}}>{{.Label}}{{$slug := .Slug}}{{range .Hot}}{{if eq . $slug}}<span class="stage-dot" title="Relevant to the current stage"></span>{{end}}{{end}}</a>
+{{end}}
+
+{{define "health_badge"}}
+{{if eq .Status "green"}}<span class="badge badge-green"><span class="dot"></span>On track</span>
+{{else if eq .Status "amber"}}<span class="badge badge-amber"><span class="dot"></span>At risk</span>
+{{else if eq .Status "red"}}<span class="badge badge-red"><span class="dot"></span>Needs attention</span>
+{{else}}<span class="badge badge-grey">Closed</span>{{end}}
+{{end}}
+
+{{define "coach_panel"}}
+{{/* expects .Advice (slice) and .P */}}
+<div class="coach">
+  <div class="coach-head">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M8 5v3.5l2.4 1.5"/></svg>
+    Project coach
+  </div>
+  {{if .Advice}}
+    {{range .Advice}}
+    <div class="coach-item">
+      <span class="coach-sev {{.Severity}}">{{if eq .Severity "act"}}Act now{{else if eq .Severity "soon"}}Soon{{else}}Consider{{end}}</span>
+      <div>
+        <div class="coach-msg"><a href="/projects/{{$.P.ID}}/{{.Link}}">{{.Message}}</a></div>
+        <div class="coach-why">{{.Why}}</div>
+      </div>
+    </div>
+    {{end}}
+  {{else}}
+    <p class="coach-all-clear">Nothing needs your attention right now. Work through the stage-gate checklist to keep the project moving.</p>
+  {{end}}
+</div>
+{{end}}
+
+{{define "gate_panel"}}
+{{/* expects the page view: .Data.Gate, .Data.P */}}
+{{$gate := .Data.Gate}}
+{{$p := .Data.P}}
+<div class="card">
+  <div class="card-head">
+    <h2>{{if $gate.NextStage}}Stage gate → {{stageName $gate.NextStage}}{{else}}Ready to close?{{end}}</h2>
+    <span class="hint">{{$gate.MetCount}} of {{len $gate.Criteria}} recommended criteria met</span>
+  </div>
+  {{range $gate.Criteria}}
+  <div class="gate-item {{if .Met}}met{{end}}">
+    <span class="gate-check">{{if .Met}}✓{{end}}</span>
+    <div>
+      <div class="gate-text">{{if .Met}}{{.Text}}{{else}}<a href="/projects/{{$p.ID}}/{{.Link}}">{{.Text}}</a>{{end}}</div>
+      {{if not .Met}}<div class="gate-why">{{.Why}}</div>{{end}}
+    </div>
+  </div>
+  {{end}}
+  {{if not $p.IsClosed}}
+    {{if $gate.NextStage}}
+    <hr class="divider">
+    <form method="post" action="/projects/{{$p.ID}}/gate">
+      {{if $gate.AllMet}}
+        <button class="btn btn-primary" type="submit">Advance to {{stageName $gate.NextStage}}</button>
+      {{else}}
+        <details class="disclosure">
+          <summary>Advance anyway (override the gate)</summary>
+          <div class="disclosure-body">
+            <p class="small muted mt0">You can move on with criteria unmet — sometimes that is the right call. The unmet criteria and your reason will be recorded in the gate history.</p>
+            <div class="field">
+              <label for="override_reason">Why are you overriding this gate?</label>
+              <textarea id="override_reason" name="override_reason" required placeholder="e.g. Sponsor asked to fast-track the pilot; baseline will be captured next week"></textarea>
+            </div>
+            <button class="btn" type="submit">Override and advance to {{stageName $gate.NextStage}}</button>
+          </div>
+        </details>
+      {{end}}
+    </form>
+    {{else if $gate.AllMet}}
+    <hr class="divider">
+    <p class="small muted">Everything is in place — close the project from the <a href="/projects/{{$p.ID}}/close">Close tab</a>.</p>
+    {{end}}
+  {{end}}
+</div>
+{{end}}

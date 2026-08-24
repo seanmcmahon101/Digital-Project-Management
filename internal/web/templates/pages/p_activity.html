@@ -1,0 +1,32 @@
+{{define "content"}}
+{{template "project_header" .}}
+{{$p := .Data.P}}
+
+<div class="card">
+  <div class="card-head">
+    <h2>Activity history</h2>
+    <span class="hint">Everything that has happened on this project, most recent first</span>
+  </div>
+  {{if .Data.Entries}}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>When</th><th>What</th><th>Detail</th></tr></thead>
+    <tbody>
+      {{range .Data.Entries}}
+      <tr>
+        <td style="white-space:nowrap" class="small muted">{{datetime .CreatedAt}}</td>
+        <td style="white-space:nowrap">
+          {{if .EntityRef}}<span class="ref">{{.EntityRef}}</span> {{end}}
+          <span class="small">{{.Entity}} · {{.Action}}</span>
+        </td>
+        <td class="small">{{.Detail}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+  {{else}}
+  <p class="muted small">No activity recorded yet.</p>
+  {{end}}
+</div>
+{{end}}

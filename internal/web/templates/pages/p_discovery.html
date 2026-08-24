@@ -1,0 +1,131 @@
+{{define "content"}}
+{{template "project_header" .}}
+{{$p := .Data.P}}
+{{$snap := .Data.Snap}}
+
+<div class="grid grid-main-side">
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <h2>Current state</h2>
+        <span class="hint">How the work is actually done today — including the workarounds</span>
+      </div>
+      <form method="post" action="/projects/{{$p.ID}}/update">
+        <input type="hidden" name="back" value="/projects/{{$p.ID}}/discovery">
+        <div class="field">
+          <textarea name="current_state" rows="8"
+            placeholder="Walk the process with the people who do it. Number the steps, note timings, and record the unofficial workarounds — the Excel shadow-systems are usually where the real requirements hide.">{{$p.CurrentState}}</textarea>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">Save</button></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Pain points</h2>
+        <span class="hint">Specific and concrete — these justify the project and become requirements later</span>
+      </div>
+      {{if $snap.PainPoints}}
+      <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Pain point</th><th>Process area</th><th>Impact</th><th>How often</th><th></th></tr></thead>
+        <tbody>
+          {{range $snap.PainPoints}}
+          <tr>
+            <td>{{.Description}}</td>
+            <td>{{.ProcessArea}}</td>
+            <td>{{if eq .Impact "high"}}<span class="badge badge-red">High</span>{{else if eq .Impact "medium"}}<span class="badge badge-amber">Medium</span>{{else}}<span class="badge badge-grey">Low</span>{{end}}</td>
+            <td>{{.Frequency}}</td>
+            <td class="actions">
+              <form method="post" action="/painpoints/{{.ID}}/delete">
+                <input type="hidden" name="back" value="/projects/{{$p.ID}}/discovery">
+                <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+      </div>
+      {{else}}
+      <div class="empty">
+        <p class="empty-title">No pain points captured yet</p>
+        <p>Write them the way people say them: “re-keying takes two hours per order”, “nobody can find the latest version”. Numbers make them powerful.</p>
+      </div>
+      {{end}}
+      <details class="disclosure">
+        <summary>Add a pain point</summary>
+        <div class="disclosure-body">
+          <form method="post" action="/projects/{{$p.ID}}/painpoints">
+            <input type="hidden" name="back" value="/projects/{{$p.ID}}/discovery">
+            <div class="field">
+              <label for="pp_desc">What hurts?</label>
+              <textarea id="pp_desc" name="description" rows="2" required></textarea>
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label for="pp_area">Process area</label>
+                <input type="text" id="pp_area" name="process_area" placeholder="e.g. Goods-in">
+              </div>
+              <div class="field">
+                <label for="pp_impact">Impact</label>
+                <select id="pp_impact" name="impact">
+                  <option value="high">High</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="pp_freq">How often</label>
+                <input type="text" id="pp_freq" name="frequency" placeholder="e.g. Every shift">
+              </div>
+            </div>
+            <button class="btn btn-primary" type="submit">Add pain point</button>
+          </form>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div>
+    <div class="coach" style="margin-bottom:18px">
+      <div class="coach-head">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M8 5v3.5l2.4 1.5"/></svg>
+        Why Discovery matters
+      </div>
+      <p class="small" style="margin:0 0 8px;color:var(--ink-2)">The most common digitalisation mistake is designing the solution before understanding the problem. Discovery is cheap; rework is not.</p>
+      <p class="small" style="margin:0;color:var(--ink-2)"><b>Capture the baseline now.</b> Once the new solution is live it is impossible to reconstruct how bad things used to be — and without a before-picture you can never prove the project worked. Define benefits and record baseline values on the <a href="/projects/{{$p.ID}}/benefits">Benefits tab</a>.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Baseline check</h2></div>
+      {{if $snap.Benefits}}
+      <table class="table"><tbody>
+        {{range $snap.Benefits}}
+        <tr>
+          <td><span class="ref">{{.Ref}}</span> {{.Name}}</td>
+          <td class="right">{{if .HasBaseline}}<span class="badge badge-green">Baseline {{num .BaselineValue.Float64}} {{.Unit}}</span>{{else}}<span class="badge badge-amber">No baseline</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody></table>
+      {{else}}
+      <p class="muted small">No benefits defined yet. <a href="/projects/{{$p.ID}}/benefits">Define the first benefit and its baseline →</a></p>
+      {{end}}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Stakeholders</h2></div>
+      {{if $snap.Stakeholders}}
+      <table class="table"><tbody>
+        {{range $snap.Stakeholders}}
+        <tr><td>{{.Name}}<div class="small muted">{{.Role}}</div></td></tr>
+        {{end}}
+      </tbody></table>
+      <p class="small"><a href="/projects/{{$p.ID}}/people">Manage stakeholders →</a></p>
+      {{else}}
+      <p class="muted small">Nobody mapped yet. <a href="/projects/{{$p.ID}}/people">Identify who is affected, who can block you, and who has to change →</a></p>
+      {{end}}
+    </div>
+  </div>
+</div>
+{{end}}

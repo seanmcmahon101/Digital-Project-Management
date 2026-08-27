@@ -2,12 +2,7 @@
 
 **Built to be very simple to use.**
 
-<!--
-Add the main product screenshot here. A 16:9 dashboard image works well.
-
-Example:
-![Digital Project Management dashboard](docs/images/dashboard.png)
--->
+![Digital Project Management project overview showing project coaching and stage-gate guidance](docs/images/project-overview.png)
 
 [![CI](https://github.com/seanmcmahon101/Digital-Project-Management/actions/workflows/ci.yml/badge.svg)](https://github.com/seanmcmahon101/Digital-Project-Management/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/seanmcmahon101/Digital-Project-Management)](https://github.com/seanmcmahon101/Digital-Project-Management/releases/latest)

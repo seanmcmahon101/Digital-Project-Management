@@ -1,12 +1,27 @@
 # Digital Project Management
 
+**Built to be very simple to use.**
+
+<!--
+Add the main product screenshot here. A 16:9 dashboard image works well.
+
+Example:
+![Digital Project Management dashboard](docs/images/dashboard.png)
+-->
+
 [![CI](https://github.com/seanmcmahon101/Digital-Project-Management/actions/workflows/ci.yml/badge.svg)](https://github.com/seanmcmahon101/Digital-Project-Management/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/seanmcmahon101/Digital-Project-Management)](https://github.com/seanmcmahon101/Digital-Project-Management/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A private, local-first workspace for taking digital projects from an initial idea through delivery, benefits tracking, and lessons learned.
+A private, local-first operating system for taking digital projects from an initial idea through delivery, benefits tracking, and lessons learned.
 
 Digital Project Management runs on your computer and opens in your normal web browser. It does not require an account, a cloud service, or a separate database server. Your project data remains in a local SQLite database that you control.
+
+## Why I built it
+
+I built Digital Project Management as my daily operating system for managing digital projects. It brings the working parts of delivery into one focused place: ideas, business cases, plans, RAID, RACI, decisions, scope, financials, benefits, and lessons learned.
+
+The aim is not to add more process. It is to make good project governance easier to follow, keep the next important action visible, and maintain a clear record from the original problem through to the benefit delivered.
 
 ## What it includes
 

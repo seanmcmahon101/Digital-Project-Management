@@ -1,12 +1,14 @@
 package web
 
 import (
+	"encoding/json"
 	"html/template"
 	"io/fs"
 	"net/http"
 	"strconv"
+	"sync"
 
-	"digipm/internal/store"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/store"
 )
 
 // Server wires the store to HTTP handlers and templates.
@@ -17,6 +19,10 @@ type Server struct {
 	DBPath    string
 	Version   string
 	tmpl      map[string]*template.Template
+	// workspaceMu keeps database snapshots/restores consistent with uploaded
+	// files, whose bytes live alongside (rather than inside) SQLite.
+	workspaceMu sync.RWMutex
+	backupMu    sync.Mutex
 }
 
 // NewServer builds the server and parses all templates.
@@ -31,12 +37,14 @@ func NewServer(st *store.Store, dataDir, backupDir, dbPath, version string) (*Se
 // Handler returns the routed http.Handler.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /healthz", s.healthz)
 
 	staticFS, _ := fs.Sub(assets, "static")
 	mux.Handle("GET /static/", http.StripPrefix("/static/", cacheStatic(http.FileServer(http.FS(staticFS)))))
 
 	// Dashboard and global views.
 	mux.HandleFunc("GET /{$}", s.dashboard)
+	mux.HandleFunc("GET /search", s.search)
 	mux.HandleFunc("GET /tasks", s.globalTasks)
 	mux.HandleFunc("GET /risks", s.globalRisks)
 	mux.HandleFunc("GET /decisions", s.globalDecisions)
@@ -70,6 +78,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /projects/{id}/gate", s.advanceGate)
 	mux.HandleFunc("POST /projects/{id}/close", s.closeProject)
 	mux.HandleFunc("POST /projects/{id}/reopen", s.reopenProject)
+	mux.HandleFunc("POST /projects/{id}/hold", s.projectHold)
 	mux.HandleFunc("POST /projects/{id}/delete", s.deleteProject)
 	mux.HandleFunc("POST /projects/{id}/documents/upload", s.uploadDocument)
 	mux.HandleFunc("POST /projects/{id}/documents/link", s.addDocumentLink)
@@ -153,12 +162,48 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /restore/upload", s.restoreUpload)
 	mux.HandleFunc("POST /import/projects", s.importProjects)
 
-	return mux
+	return s.protectHTTP(s.workspaceAccess(mux))
+}
+
+// InstanceHeader identifies this application to launchers probing a port that
+// may already be occupied. The value is stable across application versions.
+const InstanceHeader = "X-Digital-Project-Management-Instance"
+
+func (s *Server) healthz(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set(InstanceHeader, "DigitalProjectManagement")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"application": "Digital Project Management",
+		"status":      "ok",
+		"version":     s.Version,
+	})
+}
+
+// workspaceAccess lets ordinary page reads run concurrently while serialising
+// every mutation. In particular, backup/restore can never race an upload or a
+// database write, and restore cannot close SQLite beneath an in-flight page.
+func (s *Server) workspaceAccess(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// A manual backup only reads workspace state, so it may run alongside
+		// page views while still excluding every mutation. Restore remains an
+		// exclusive POST because it closes and replaces the live database.
+		readAccess := r.Method == http.MethodGet || r.Method == http.MethodHead ||
+			(r.Method == http.MethodPost && r.URL.Path == "/backup")
+		if readAccess {
+			s.workspaceMu.RLock()
+			defer s.workspaceMu.RUnlock()
+		} else {
+			s.workspaceMu.Lock()
+			defer s.workspaceMu.Unlock()
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func cacheStatic(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "public, max-age=86400")
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		next.ServeHTTP(w, r)
 	})
 }

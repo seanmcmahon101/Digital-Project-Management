@@ -1,0 +1,56 @@
+name: Feature request
+description: Suggest an improvement to a project-management workflow.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the user or project-management problem, rather than only the desired interface.
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: What should a user be able to accomplish?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Suggested approach
+      description: Share an approach if you have one. Alternatives are welcome.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Area
+      options:
+        - Ideas and portfolio
+        - Project planning and delivery
+        - RAID, decisions, or governance
+        - Scope, requirements, testing, or changes
+        - Financials, benefits, or reporting
+        - Documents, import, export, or backups
+        - Setup, accessibility, or general usability
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: simplicity
+    attributes:
+      label: Simplicity and compatibility
+      description: Note how the change could remain understandable and whether it affects existing project data.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues for this request.
+          required: true

@@ -6,7 +6,7 @@ package coach
 import (
 	"strings"
 
-	"digipm/internal/store"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/store"
 )
 
 // Criterion is one recommended completion item for a stage gate.

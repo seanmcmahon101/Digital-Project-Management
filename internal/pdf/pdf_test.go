@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"digipm/internal/coach"
-	"digipm/internal/store"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/coach"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/store"
 )
 
 func nf(v float64) sql.NullFloat64 { return sql.NullFloat64{Float64: v, Valid: true} }

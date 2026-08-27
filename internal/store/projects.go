@@ -163,9 +163,20 @@ func (s *Store) UpdateProjectFields(id int64, fields map[string]string) error {
 // transition. unmet lists criteria that were not satisfied; when non-empty
 // the move is recorded as an override with the supplied reason.
 func (s *Store) AdvanceStage(id int64, unmet []string, overrideReason string) (Project, error) {
-	p, err := s.Project(id)
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return Project{}, err
+	}
+	defer tx.Rollback()
+	p, err := scanProject(tx.QueryRow(`SELECT `+projectCols+` FROM projects WHERE id = ?`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return p, ErrNotFound
+	}
 	if err != nil {
 		return p, err
+	}
+	if p.Status != "active" {
+		return p, &ValidationError{Problems: []string{"Resume the project before advancing its stage"}}
 	}
 	next := NextStage(p.Stage)
 	if next == "" {
@@ -178,11 +189,11 @@ func (s *Store) AdvanceStage(id int64, unmet []string, overrideReason string) (P
 		}
 		overridden = 1
 	}
-	_, err = s.DB.Exec(`UPDATE projects SET stage = ?, updated_at = datetime('now') WHERE id = ?`, next, id)
+	_, err = tx.Exec(`UPDATE projects SET stage = ?, updated_at = datetime('now') WHERE id = ?`, next, id)
 	if err != nil {
 		return p, err
 	}
-	_, err = s.DB.Exec(`INSERT INTO gate_history (project_id, from_stage, to_stage, overridden, override_reason, unmet_criteria)
+	_, err = tx.Exec(`INSERT INTO gate_history (project_id, from_stage, to_stage, overridden, override_reason, unmet_criteria)
 		VALUES (?, ?, ?, ?, ?, ?)`, id, p.Stage, next, overridden, overrideReason, strings.Join(unmet, "\n"))
 	if err != nil {
 		return p, err
@@ -191,7 +202,13 @@ func (s *Store) AdvanceStage(id int64, unmet []string, overrideReason string) (P
 	if overridden == 1 {
 		detail += " (gate overridden: " + overrideReason + ")"
 	}
-	s.LogActivity(id, "gate", "", "stage_advanced", detail)
+	if _, err = tx.Exec(`INSERT INTO activity_log (project_id, entity, entity_ref, action, detail)
+		VALUES (?, 'gate', '', 'stage_advanced', ?)`, id, detail); err != nil {
+		return p, err
+	}
+	if err = tx.Commit(); err != nil {
+		return p, err
+	}
 	return s.Project(id)
 }
 
@@ -219,6 +236,40 @@ func (s *Store) ReopenProject(id int64) error {
 	}
 	s.LogActivity(id, "project", "", "reopened", "Project reopened")
 	return nil
+}
+
+// SetProjectHold pauses or resumes an active project and records the reason in
+// the activity history. Closed projects must be reopened through their
+// dedicated workflow first.
+func (s *Store) SetProjectHold(id int64, hold bool, reason string) error {
+	p, err := s.Project(id)
+	if err != nil {
+		return err
+	}
+	if p.IsClosed() {
+		return &ValidationError{Problems: []string{"Reopen the project before changing its hold status"}}
+	}
+	reason = strings.TrimSpace(reason)
+	if hold && reason == "" {
+		return &ValidationError{Problems: []string{"Add a reason for putting the project on hold"}}
+	}
+	status, action, detail := "on_hold", "put_on_hold", reason
+	if !hold {
+		status, action, detail = "active", "resumed", "Project resumed"
+	}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`UPDATE projects SET status = ?, updated_at = datetime('now') WHERE id = ?`, status, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`INSERT INTO activity_log (project_id, entity, entity_ref, action, detail)
+		VALUES (?, 'project', ?, ?, ?)`, id, p.Code, action, detail); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // GateEntry is one recorded stage transition.

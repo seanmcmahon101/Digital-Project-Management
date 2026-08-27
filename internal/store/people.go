@@ -145,6 +145,15 @@ func (s *Store) CreateRaciActivity(projectID int64, name string) error {
 
 // SetRaci assigns or clears a RACI letter for one activity/stakeholder cell.
 func (s *Store) SetRaci(activityID, stakeholderID int64, letter string) error {
+	var sameProject int
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM raci_activities a
+		JOIN stakeholders sh ON sh.id = ? AND sh.project_id = a.project_id
+		WHERE a.id = ?`, stakeholderID, activityID).Scan(&sameProject); err != nil {
+		return err
+	}
+	if sameProject == 0 {
+		return &ValidationError{Problems: []string{"The activity and stakeholder must belong to the same project"}}
+	}
 	if letter == "" {
 		_, err := s.DB.Exec(`DELETE FROM raci_assignments WHERE activity_id=? AND stakeholder_id=?`,
 			activityID, stakeholderID)

@@ -2,13 +2,16 @@ package web
 
 import (
 	"errors"
+	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"digipm/internal/coach"
-	"digipm/internal/store"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/coach"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/store"
 )
 
 // validTabs maps workspace tab slugs to their template names.
@@ -307,6 +310,24 @@ func (s *Server) reopenProject(w http.ResponseWriter, r *http.Request) {
 	s.redirect(w, r, "/projects/"+itoa64(id)+"/overview", "Project reopened.")
 }
 
+func (s *Server) projectHold(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(r)
+	if !ok {
+		s.notFound(w)
+		return
+	}
+	hold := r.FormValue("action") == "hold"
+	if err := s.St.SetProjectHold(id, hold, r.FormValue("reason")); err != nil {
+		s.fail(w, r, projURL(id, "overview"), err)
+		return
+	}
+	message := "Project resumed."
+	if hold {
+		message = "Project put on hold. The reason is recorded in its activity history."
+	}
+	s.redirect(w, r, projURL(id, "overview"), message)
+}
+
 func (s *Server) deleteProject(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(r)
 	if !ok {
@@ -326,6 +347,12 @@ func (s *Server) deleteProject(w http.ResponseWriter, r *http.Request) {
 	if err := s.St.DeleteProject(id); err != nil {
 		s.fail(w, r, "/projects", err)
 		return
+	}
+	uploadDir := filepath.Join(s.DataDir, "uploads", itoa64(id))
+	if err := os.RemoveAll(uploadDir); err != nil {
+		// The database deletion is already committed. Log cleanup failures so a
+		// later maintenance pass can remove the harmless orphaned directory.
+		log.Printf("remove uploads for deleted project %d: %v", id, err)
 	}
 	s.redirect(w, r, "/projects", p.Code+" deleted permanently.")
 }

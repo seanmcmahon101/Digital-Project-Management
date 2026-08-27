@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"errors"
+	"math"
 )
 
 type Benefit struct {
@@ -255,6 +256,9 @@ func (s *Store) CreateBenefit(projectID int64, name, category, unit, direction s
 	if err := Validate(Require(name, "Benefit name"), ValidDate(baselineDate, "Baseline date")); err != nil {
 		return err
 	}
+	if err := validateBenefitNumbers(baseline, target, annualValue); err != nil {
+		return err
+	}
 	if _, ok := BenefitCategoryNames[category]; !ok {
 		category = "custom"
 	}
@@ -288,6 +292,9 @@ func (s *Store) UpdateBenefit(id int64, name, category, unit, direction string,
 	if err := Validate(Require(name, "Benefit name"), ValidDate(baselineDate, "Baseline date")); err != nil {
 		return err
 	}
+	if err := validateBenefitNumbers(baseline, target, annualValue); err != nil {
+		return err
+	}
 	if _, ok := BenefitCategoryNames[category]; !ok {
 		category = "custom"
 	}
@@ -304,6 +311,9 @@ func (s *Store) UpdateBenefit(id int64, name, category, unit, direction string,
 
 // AddMeasurement records an actual value for a benefit.
 func (s *Store) AddMeasurement(benefitID int64, value float64, measuredAt, notes string) error {
+	if math.IsNaN(value) || math.IsInf(value, 0) {
+		return &ValidationError{Problems: []string{"Measured value must be a finite number"}}
+	}
 	if measuredAt == "" {
 		measuredAt = Today()
 	}
@@ -319,6 +329,18 @@ func (s *Store) AddMeasurement(benefitID int64, value float64, measuredAt, notes
 	var ref string
 	if s.DB.QueryRow(`SELECT project_id, ref FROM benefits WHERE id = ?`, benefitID).Scan(&projectID, &ref) == nil {
 		s.LogActivity(projectID, "benefit", ref, "measured", "")
+	}
+	return nil
+}
+
+func validateBenefitNumbers(baseline, target *float64, annualValue float64) error {
+	for _, value := range []*float64{baseline, target} {
+		if value != nil && (math.IsNaN(*value) || math.IsInf(*value, 0)) {
+			return &ValidationError{Problems: []string{"Benefit values must be finite numbers"}}
+		}
+	}
+	if math.IsNaN(annualValue) || math.IsInf(annualValue, 0) || annualValue < 0 {
+		return &ValidationError{Problems: []string{"Annual value must be a finite, non-negative number"}}
 	}
 	return nil
 }

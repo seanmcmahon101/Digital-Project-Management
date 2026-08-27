@@ -5,8 +5,8 @@ import (
 	"log"
 	"net/http"
 
-	"digipm/internal/coach"
-	"digipm/internal/pdf"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/coach"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/pdf"
 )
 
 // exportBusinessCase streams the project's business case as a PDF download.

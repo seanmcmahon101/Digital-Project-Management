@@ -190,6 +190,9 @@ func (s *Store) CreateTest(projectID, requirementID int64, name, steps, expected
 	if err := Validate(Require(name, "Test name")); err != nil {
 		return err
 	}
+	if err := s.validateRequirementProject(projectID, requirementID); err != nil {
+		return err
+	}
 	ref, err := s.NextRef(projectID, "TEST")
 	if err != nil {
 		return err
@@ -233,6 +236,16 @@ func (s *Store) UpdateTest(id, requirementID int64, name, steps, expected string
 	if err := Validate(Require(name, "Test name")); err != nil {
 		return err
 	}
+	var projectID int64
+	if err := s.DB.QueryRow(`SELECT project_id FROM tests WHERE id = ?`, id).Scan(&projectID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	if err := s.validateRequirementProject(projectID, requirementID); err != nil {
+		return err
+	}
 	var req any
 	if requirementID > 0 {
 		req = requirementID
@@ -240,6 +253,21 @@ func (s *Store) UpdateTest(id, requirementID int64, name, steps, expected string
 	_, err := s.DB.Exec(`UPDATE tests SET requirement_id=?, name=?, steps=?, expected=? WHERE id = ?`,
 		req, name, steps, expected, id)
 	return err
+}
+
+func (s *Store) validateRequirementProject(projectID, requirementID int64) error {
+	if requirementID <= 0 {
+		return nil
+	}
+	var count int
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM requirements WHERE id = ? AND project_id = ?`,
+		requirementID, projectID).Scan(&count); err != nil {
+		return err
+	}
+	if count == 0 {
+		return &ValidationError{Problems: []string{"The selected requirement does not belong to this project"}}
+	}
+	return nil
 }
 
 func (s *Store) DeleteTest(id int64) error {

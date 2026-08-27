@@ -1,0 +1,50 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1>Search</h1>
+    <p class="sub">Find projects, tasks, RAID items, decisions, requirements, changes, benefits, documents, people, and lessons.</p>
+  </div>
+</div>
+
+<div class="card search-page-card">
+  <form class="search-page-form" method="get" action="/search" role="search">
+    <label class="sr-only" for="search_page_query">Search the portfolio</label>
+    <input id="search_page_query" type="search" name="q" value="{{.Data.Query}}" maxlength="100"
+           placeholder="Try a project code, owner, keyword, or reference…" autofocus>
+    <button class="btn btn-primary" type="submit">Search</button>
+  </form>
+</div>
+
+{{if .Data.Query}}
+  {{if .Data.Results}}
+  <div class="search-summary">{{len .Data.Results}} result{{if ne (len .Data.Results) 1}}s{{end}} for “{{.Data.Query}}”</div>
+  <div class="search-results">
+    {{range .Data.Results}}
+    <a class="search-result" href="{{.Link}}">
+      <span class="search-result-kind">{{.KindLabel}}</span>
+      <span class="search-result-body">
+        <span class="search-result-title">{{if .Ref}}<span class="ref">{{.Ref}}</span> {{end}}{{.Title}}</span>
+        {{if and .ProjectCode (ne .Kind "project")}}<span class="search-result-project">{{.ProjectCode}} · {{.ProjectName}}</span>{{end}}
+        {{if .Summary}}<span class="search-result-summary">{{truncate 180 .Summary}}</span>{{end}}
+      </span>
+      <span class="search-result-arrow" aria-hidden="true">→</span>
+    </a>
+    {{end}}
+  </div>
+  {{else}}
+  <div class="card">
+    <div class="empty">
+      <p class="empty-title">No matches for “{{.Data.Query}}”</p>
+      <p>Try a shorter term, a project code such as DPM-001, or a person’s name.</p>
+    </div>
+  </div>
+  {{end}}
+{{else}}
+<div class="card">
+  <div class="empty">
+    <p class="empty-title">Search the whole workspace</p>
+    <p>Press <kbd>/</kbd> or <kbd>Ctrl</kbd> + <kbd>K</kbd> from anywhere to start searching.</p>
+  </div>
+</div>
+{{end}}
+{{end}}

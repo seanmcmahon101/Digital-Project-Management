@@ -1,2 +1,30 @@
+# Local application data
+/data/
+*.db
+*.db-shm
+*.db-wal
+*.dpm-backup
+*.log
+
+# Build and test output
+/build/
+/dist/
+/DigitalisationPM
+/digital-project-management
 *.exe
-data/
+*.test
+*.out
+coverage.*
+
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo

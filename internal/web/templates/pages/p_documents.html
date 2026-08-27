@@ -67,7 +67,7 @@
             {{else}}
               <a class="btn btn-sm" href="{{.URL}}" target="_blank" rel="noopener noreferrer" hx-boost="false">Open link</a>
             {{end}}
-            <form method="post" action="/documents/{{.ID}}/delete" class="inline-form" onsubmit="return confirm('Remove this document? Uploaded files will be permanently deleted.')">
+            <form method="post" action="/documents/{{.ID}}/delete" class="inline-form" data-confirm="Remove this document? Uploaded files will be permanently deleted.">
               <button class="btn btn-sm btn-danger" type="submit">Delete</button>
             </form>
           </td>

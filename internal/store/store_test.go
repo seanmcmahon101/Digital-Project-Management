@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"digipm/internal/db"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/db"
 )
 
 func testStore(t *testing.T) *Store {
@@ -82,6 +82,64 @@ func TestProjectLifecycle(t *testing.T) {
 	p3, _ := s.Project(p.ID)
 	if p3.Status != "cancelled" || !p3.IsClosed() {
 		t.Fatalf("expected cancelled, got %+v", p3.Status)
+	}
+}
+
+func TestProjectHoldAndResume(t *testing.T) {
+	s := testStore(t)
+	p, err := s.CreateProject("Paused delivery", "", "", "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetProjectHold(p.ID, true, ""); err == nil {
+		t.Fatal("putting a project on hold without a reason should fail")
+	}
+	if err := s.SetProjectHold(p.ID, true, "Waiting for procurement approval"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.AdvanceStage(p.ID, nil, ""); err == nil {
+		t.Fatal("on-hold project was allowed to advance")
+	}
+	p, err = s.Project(p.ID)
+	if err != nil || p.Status != "on_hold" {
+		t.Fatalf("held project = %+v, err=%v", p, err)
+	}
+	if err := s.SetProjectHold(p.ID, false, ""); err != nil {
+		t.Fatal(err)
+	}
+	p, err = s.Project(p.ID)
+	if err != nil || p.Status != "active" {
+		t.Fatalf("resumed project = %+v, err=%v", p, err)
+	}
+}
+
+func TestAdvanceStageRollsBackWhenHistoryCannotBeRecorded(t *testing.T) {
+	s := testStore(t)
+	p, err := s.CreateProject("Transactional gate", "", "", "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.DB.Exec(`CREATE TRIGGER reject_gate_history BEFORE INSERT ON gate_history
+		BEGIN SELECT RAISE(ABORT, 'history unavailable'); END`); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := s.AdvanceStage(p.ID, nil, ""); err == nil {
+		t.Fatal("expected gate history failure")
+	}
+	got, err := s.Project(p.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Stage != "intake" {
+		t.Fatalf("stage changed despite failed history insert: %q", got.Stage)
+	}
+	history, err := s.GateHistory(p.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(history) != 0 {
+		t.Fatalf("unexpected gate history after rollback: %+v", history)
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"digipm/internal/store"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/store"
 )
 
 const (
@@ -42,8 +42,28 @@ func writeProjectsCSV(w io.Writer, rows []store.ProjectTransferRow) error {
 		return err
 	}
 	cw := csv.NewWriter(w)
-	err := cw.WriteAll(projectsTable(rows))
+	table := projectsTable(rows)
+	for row := range table {
+		for col := range table[row] {
+			table[row][col] = safeCSVCell(table[row][col])
+		}
+	}
+	err := cw.WriteAll(table)
 	return err
+}
+
+// safeCSVCell prevents spreadsheet applications from interpreting exported
+// user text as a formula. Quoting alone does not disable formula evaluation.
+func safeCSVCell(value string) string {
+	if value == "" {
+		return value
+	}
+	switch value[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		return "'" + value
+	default:
+		return value
+	}
 }
 
 func readProjectsCSV(r io.Reader) ([]store.ProjectTransferRow, error) {

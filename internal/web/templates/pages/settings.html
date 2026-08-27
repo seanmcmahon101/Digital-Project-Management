@@ -13,7 +13,7 @@
       <form method="post" action="/settings">
         <div class="field">
           <label for="org_name">Organisation name</label>
-          <input type="text" id="org_name" name="org_name" value="{{.Data.OrgName}}" placeholder="Shown on reports">
+          <input type="text" id="org_name" name="org_name" value="{{.Data.OrgName}}" maxlength="120" placeholder="Shown on reports">
         </div>
         <div class="form-row">
           <div class="field">
@@ -22,7 +22,7 @@
           </div>
           <div class="field">
             <label for="hourly_rate">Default loaded hourly rate</label>
-            <input type="number" step="any" id="hourly_rate" name="hourly_rate" value="{{.Data.HourlyRate}}">
+            <input type="number" step="any" min="0" id="hourly_rate" name="hourly_rate" value="{{.Data.HourlyRate}}">
             <p class="help">Useful when converting hours saved into money in business cases.</p>
           </div>
         </div>
@@ -45,7 +45,7 @@
         <a class="btn" href="/export/projects.xlsx" hx-boost="false" download>Export Excel (.xlsx)</a>
       </div>
       <form method="post" action="/import/projects" enctype="multipart/form-data"
-            onsubmit="return confirm('Import this project register? Matching project codes will be updated.')">
+            data-confirm="Import this project register? Matching project codes will be updated.">
         <div class="field">
           <label for="project_import">Import project register</label>
           <input id="project_import" type="file" name="file" accept=".csv,.xlsx" required>
@@ -57,33 +57,35 @@
 
     <div class="card">
       <div class="card-head"><h2>About</h2></div>
-      <p class="small muted">DigitalisationPM v{{.Data.Version}} · data folder: <code style="font-family:var(--mono);font-size:12px">{{.Data.DataDir}}</code></p>
-      <p class="small muted mb0">A daily backup is taken automatically on startup (last 14 kept). The app runs entirely on this machine — nothing leaves it.</p>
+      <p class="small muted">Digital Project Management {{.Data.Version}} · data folder: <code style="font-family:var(--mono);font-size:12px">{{.Data.DataDir}}</code></p>
+      <p class="small muted mb0">A complete workspace backup is taken automatically on startup, at most once per day (last 14 kept). Project data and uploaded documents stay on this machine.</p>
     </div>
   </div>
 
   <div>
     <div class="card">
       <div class="card-head">
-        <h2>Backups</h2>
-        <span class="hint">Taken with SQLite's consistent snapshot (VACUUM INTO)</span>
+        <h2>Complete workspace backups</h2>
+        <span class="hint">Database + uploaded documents · versioned and checksummed</span>
       </div>
+      <p class="small muted">Each <code>.dpm-backup</code> archive contains a consistent database snapshot, every uploaded document, and a manifest used to verify the archive before restore.</p>
       <form method="post" action="/backup" style="margin-bottom:12px">
         <button class="btn btn-primary" type="submit">Back up now</button>
       </form>
       {{if .Data.Backups}}
       <div class="table-wrap">
       <table class="table">
-        <thead><tr><th>Backup</th><th>Size</th><th></th></tr></thead>
+        <thead><tr><th>Backup</th><th>Contents</th><th>Size</th><th></th></tr></thead>
         <tbody>
           {{range .Data.Backups}}
           <tr>
             <td style="font-family:var(--mono);font-size:12px">{{.Name}}</td>
+            <td class="small">{{if .IsWorkspace}}Complete workspace{{else}}Legacy database only{{end}}</td>
             <td class="small muted" style="white-space:nowrap">{{printf "%.0f" (kb .Size)}} KB</td>
             <td class="actions" style="white-space:nowrap">
               <a class="btn btn-sm" href="/backup/download/{{.Name}}" hx-boost="false" download>Download</a>
               <form method="post" action="/restore" class="inline-form"
-                    onsubmit="return confirm('Restore this backup? Current data will be replaced (a safety copy is taken first).')">
+                    data-confirm="Restore this backup? Current data will be replaced after a safety backup is taken.">
                 <input type="hidden" name="name" value="{{.Name}}">
                 <button class="btn btn-sm btn-danger" type="submit">Restore</button>
               </form>
@@ -94,17 +96,19 @@
       </table>
       </div>
       {{else}}
-      <p class="muted small">No backups yet — one is created automatically each day the app starts.</p>
+      <p class="muted small">No backups yet — a complete workspace backup is created automatically when the app starts.</p>
       {{end}}
     </div>
 
     <div class="card">
-      <div class="card-head"><h2>Restore from a file</h2></div>
-      <p class="small muted">Restore a backup file from another machine or an older copy. The current database is safety-backed-up first.</p>
+      <div class="card-head"><h2>Restore from a backup file</h2></div>
+      <p class="small muted">Restore a complete <code>.dpm-backup</code> archive from another machine or an older copy. The current workspace is backed up first, the archive is fully verified, and live data is replaced only after validation succeeds.</p>
       <form method="post" action="/restore/upload" enctype="multipart/form-data"
-            onsubmit="return confirm('Restore from this file? Current data will be replaced (a safety copy is taken first).')">
+            data-confirm="Restore from this file? Current data will be replaced after a safety backup is taken.">
         <div class="field">
-          <input type="file" name="file" accept=".db" required>
+          <label for="restore_file">Backup file</label>
+          <input id="restore_file" type="file" name="file" accept=".dpm-backup,.db" required>
+          <p class="help">Legacy <code>.db</code> backups are still accepted; they restore database records while retaining the current uploads folder.</p>
         </div>
         <button class="btn btn-danger" type="submit">Restore from file</button>
       </form>

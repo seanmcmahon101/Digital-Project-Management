@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"digipm/internal/store"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/store"
 )
 
 const maxTransferSize = 20 << 20

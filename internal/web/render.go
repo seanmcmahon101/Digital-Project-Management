@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"digipm/internal/store"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/store"
 )
 
 //go:embed all:templates all:static
@@ -22,6 +22,7 @@ var assets embed.FS
 // view is the payload every template receives.
 type view struct {
 	Title             string
+	Version           string
 	Active            string // sidebar section key
 	Flash             string
 	FlashErr          string
@@ -189,6 +190,7 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, page string, v v
 		v.Data = map[string]any{}
 	}
 	v.Currency = s.currency()
+	v.Version = s.Version
 	v.SidebarColor = normaliseHexColor(s.St.Setting("sidebar_color", "#5C1E30"))
 	v.SidebarColorDeep = shadeHexColor(v.SidebarColor, 0.78)
 	v.SidebarForeground = readableForeground(v.SidebarColor)
@@ -235,11 +237,25 @@ func shadeHexColor(value string, factor float64) string {
 func readableForeground(value string) string {
 	value = normaliseHexColor(value)
 	n, _ := strconv.ParseUint(value[1:], 16, 24)
-	r, g, b := float64((n>>16)&0xff), float64((n>>8)&0xff), float64(n&0xff)
-	if (299*r+587*g+114*b)/1000 >= 150 {
+	r := relativeChannel(float64((n>>16)&0xff) / 255)
+	g := relativeChannel(float64((n>>8)&0xff) / 255)
+	b := relativeChannel(float64(n&0xff) / 255)
+	background := 0.2126*r + 0.7152*g + 0.0722*b
+	whiteContrast := 1.05 / (background + 0.05)
+	inkLuminance := 0.2126*relativeChannel(33.0/255) +
+		0.7152*relativeChannel(29.0/255) + 0.0722*relativeChannel(31.0/255)
+	inkContrast := (background + 0.05) / (inkLuminance + 0.05)
+	if inkContrast >= whiteContrast {
 		return "#211D1F"
 	}
 	return "#FFFFFF"
+}
+
+func relativeChannel(channel float64) float64 {
+	if channel <= 0.04045 {
+		return channel / 12.92
+	}
+	return math.Pow((channel+0.055)/1.055, 2.4)
 }
 
 // redirect sends the user on with an optional success flash.

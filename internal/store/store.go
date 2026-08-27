@@ -60,6 +60,22 @@ func (s *Store) SetSetting(key, value string) error {
 	return err
 }
 
+// SetSettings saves a related group of preferences atomically.
+func (s *Store) SetSettings(settings map[string]string) error {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for key, value := range settings {
+		if _, err := tx.Exec(`INSERT INTO settings (key, value) VALUES (?, ?)
+			ON CONFLICT (key) DO UPDATE SET value = excluded.value`, key, value); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 // LogActivity appends an entry to a project's activity history. Logging
 // failures are swallowed: history must never block the action itself.
 func (s *Store) LogActivity(projectID int64, entity, entityRef, action, detail string) {

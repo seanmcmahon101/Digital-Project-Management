@@ -9,8 +9,8 @@ import (
 
 	"github.com/go-pdf/fpdf"
 
-	"digipm/internal/coach"
-	"digipm/internal/store"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/coach"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/store"
 )
 
 // Brand palette (matches the web UI).

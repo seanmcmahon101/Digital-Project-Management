@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"digipm/internal/coach"
-	"digipm/internal/store"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/coach"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/store"
 )
 
 func financialFormValue(r *http.Request, key, label string) (float64, error) {

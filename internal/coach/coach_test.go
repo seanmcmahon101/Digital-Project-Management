@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"digipm/internal/store"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/store"
 )
 
 func date(daysFromNow int) string {

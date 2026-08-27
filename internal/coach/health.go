@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"digipm/internal/store"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/store"
 )
 
 // Health is the computed RAG status of a project with the reasons behind it.

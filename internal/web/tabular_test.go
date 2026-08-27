@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"digipm/internal/store"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/store"
 )
 
 func TestProjectCSVAndXLSXRoundTrip(t *testing.T) {
@@ -44,6 +44,34 @@ func TestProjectCSVRequiresNameColumn(t *testing.T) {
 	cw.Flush()
 	if _, err := readProjectsCSV(&b); err == nil || !strings.Contains(err.Error(), "name") {
 		t.Fatalf("expected missing-name-column error, got %v", err)
+	}
+}
+
+func TestProjectCSVNeutralisesSpreadsheetFormulas(t *testing.T) {
+	rows := []store.ProjectTransferRow{{
+		Code: "DPM-001", Name: "=HYPERLINK(\"https://example.invalid\")",
+		Stage: "intake", Status: "active", Sponsor: "+cmd|' /C calc'!A0",
+		Lead: "@SUM(1+1)", Department: "-2+3", Goal: "ordinary text",
+	}}
+	var out bytes.Buffer
+	if err := writeProjectsCSV(&out, rows); err != nil {
+		t.Fatal(err)
+	}
+	cr := csv.NewReader(bytes.NewReader(bytes.TrimPrefix(out.Bytes(), []byte("\xef\xbb\xbf"))))
+	table, err := cr.ReadAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(table) != 2 {
+		t.Fatalf("CSV rows = %d, want 2", len(table))
+	}
+	for _, index := range []int{1, 4, 5, 6} {
+		if !strings.HasPrefix(table[1][index], "'") {
+			t.Errorf("cell %d was not neutralised: %q", index, table[1][index])
+		}
+	}
+	if table[1][8] != "ordinary text" {
+		t.Fatalf("ordinary text changed: %q", table[1][8])
 	}
 }
 

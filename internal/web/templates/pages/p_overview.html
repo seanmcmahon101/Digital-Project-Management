@@ -86,6 +86,32 @@
       </tbody></table>
     </div>
 
+    {{if not $p.IsClosed}}
+    <div class="card">
+      <div class="card-head"><h2>Project status</h2></div>
+      {{if eq $p.Status "on_hold"}}
+        <p class="small muted">This project is paused. Its records remain available, but stage advancement and active portfolio counts are suspended.</p>
+        <form method="post" action="/projects/{{$p.ID}}/hold">
+          <button class="btn btn-primary" type="submit" name="action" value="resume">Resume project</button>
+        </form>
+      {{else}}
+        <p class="small muted">Pause delivery without closing or cancelling the project. The reason is kept in the activity history.</p>
+        <details class="disclosure">
+          <summary>Put project on hold</summary>
+          <div class="disclosure-body">
+            <form method="post" action="/projects/{{$p.ID}}/hold">
+              <div class="field">
+                <label for="hold_reason">Reason</label>
+                <textarea id="hold_reason" name="reason" maxlength="1000" required placeholder="What is paused, why, and what will trigger a restart?"></textarea>
+              </div>
+              <button class="btn" type="submit" name="action" value="hold">Put on hold</button>
+            </form>
+          </div>
+        </details>
+      {{end}}
+    </div>
+    {{end}}
+
     {{if .Data.GateHistory}}
     <div class="card">
       <div class="card-head"><h2>Gate history</h2></div>

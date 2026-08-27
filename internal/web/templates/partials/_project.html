@@ -108,7 +108,7 @@
     </div>
   </div>
   {{end}}
-  {{if not $p.IsClosed}}
+  {{if eq $p.Status "active"}}
     {{if $gate.NextStage}}
     <hr class="divider">
     <form method="post" action="/projects/{{$p.ID}}/gate">

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"digipm/internal/store"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/store"
 )
 
 // Advice is one recommendation from the Project Coach.

@@ -17,7 +17,7 @@
     <thead><tr><th>Idea</th><th>From</th><th>Score</th><th>Status</th><th></th></tr></thead>
     <tbody>
       {{range .Data.Ideas}}
-      <tr>
+      <tr id="idea-{{.ID}}">
         <td style="max-width:380px"><b>{{.Title}}</b>
           {{if .Summary}}<div class="small muted">{{truncate 160 .Summary}}</div>{{end}}</td>
         <td class="small">{{.SubmittedBy}}</td>

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"digipm/internal/db"
-	"digipm/internal/store"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/db"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/store"
 )
 
 func testHTTPServer(t *testing.T) (*Server, *store.Store) {
@@ -37,6 +37,7 @@ func performRequest(handler http.Handler, method, target string, form url.Values
 		body = strings.NewReader(form.Encode())
 	}
 	req := httptest.NewRequest(method, target, body)
+	req.Host = "127.0.0.1:8383"
 	if form != nil {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
@@ -48,13 +49,34 @@ func performRequest(handler http.Handler, method, target string, form url.Values
 func TestCorePagesRender(t *testing.T) {
 	srv, _ := testHTTPServer(t)
 	handler := srv.Handler()
-	for _, path := range []string{"/", "/ideas", "/projects", "/settings"} {
+	for _, path := range []string{"/", "/ideas", "/projects", "/search", "/settings"} {
 		rr := performRequest(handler, http.MethodGet, path, nil)
 		if rr.Code != http.StatusOK {
 			t.Errorf("GET %s returned %d: %s", path, rr.Code, rr.Body.String())
 		}
 		if !strings.Contains(rr.Header().Get("Content-Type"), "text/html") {
 			t.Errorf("GET %s content type = %q", path, rr.Header().Get("Content-Type"))
+		}
+	}
+}
+
+func TestGlobalSearchHTTPWorkflow(t *testing.T) {
+	srv, st := testHTTPServer(t)
+	p, err := st.CreateProject("Warehouse traceability", "Sam", "Alex", "Operations", "Lost batch records", "Trace every batch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.CreateTask(p.ID, "Map barcode workflow", "Interview users", "high", "Taylor", "", 0); err != nil {
+		t.Fatal(err)
+	}
+
+	rr := performRequest(srv.Handler(), http.MethodGet, "/search?q=barcode", nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("search returned %d: %s", rr.Code, rr.Body.String())
+	}
+	for _, want := range []string{"Map barcode workflow", "TASK-001", "/projects/1/board"} {
+		if !strings.Contains(rr.Body.String(), want) {
+			t.Errorf("search response missing %q", want)
 		}
 	}
 }
@@ -105,6 +127,23 @@ func TestSidebarColourSettingWorkflow(t *testing.T) {
 	rr = performRequest(handler, http.MethodGet, "/", nil)
 	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), "--sidebar-bg:#0057B8") {
 		t.Fatalf("dashboard did not render saved sidebar colour: %s", rr.Body.String())
+	}
+}
+
+func TestInvalidSettingsAreRejectedWithoutPartialSave(t *testing.T) {
+	srv, st := testHTTPServer(t)
+	if err := st.SetSettings(map[string]string{"org_name": "Original", "hourly_rate": "30"}); err != nil {
+		t.Fatal(err)
+	}
+	rr := performRequest(srv.Handler(), http.MethodPost, "/settings", url.Values{
+		"org_name": {"Changed"}, "currency": {"£"}, "hourly_rate": {"not-a-number"},
+		"sidebar_color": {"#5C1E30"},
+	})
+	if rr.Code != http.StatusSeeOther {
+		t.Fatalf("invalid settings returned %d", rr.Code)
+	}
+	if got := st.Setting("org_name", ""); got != "Original" {
+		t.Fatalf("settings were partially saved: org_name=%q", got)
 	}
 }
 

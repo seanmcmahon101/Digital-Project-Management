@@ -131,7 +131,7 @@
               <input type="hidden" name="back" value="/projects/{{$p.ID}}/people">
               <input type="hidden" name="activity_id" value="{{$act.ID}}">
               <input type="hidden" name="stakeholder_id" value="{{$sh.ID}}">
-              <select class="raci-select" name="letter" onchange="this.form.requestSubmit()" aria-label="RACI for {{$sh.Name}} on {{$act.Name}}">
+              <select class="raci-select" name="letter" data-auto-submit aria-label="RACI for {{$sh.Name}} on {{$act.Name}}">
                 {{$cur := index $act.Letters $sh.ID}}
                 <option value="" {{if eq $cur ""}}selected{{end}}>—</option>
                 <option value="R" {{if eq $cur "R"}}selected{{end}}>R</option>

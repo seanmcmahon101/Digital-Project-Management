@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"digipm/internal/store"
+	"github.com/seanmcmahon101/Digital-Project-Management/internal/store"
 )
 
 // projRedirect sends back to a workspace tab of the project.

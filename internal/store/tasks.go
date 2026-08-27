@@ -105,6 +105,9 @@ func (s *Store) CreateTask(projectID int64, title, notes, priority, assignee, du
 	if err := Validate(Require(title, "Task title"), ValidDate(dueDate, "Due date")); err != nil {
 		return Task{}, err
 	}
+	if err := s.validateMilestoneProject(projectID, milestoneID); err != nil {
+		return Task{}, err
+	}
 	if priority != "low" && priority != "high" {
 		priority = "medium"
 	}
@@ -130,14 +133,36 @@ func (s *Store) UpdateTask(id int64, title, notes, priority, assignee, dueDate s
 	if err := Validate(Require(title, "Task title"), ValidDate(dueDate, "Due date")); err != nil {
 		return err
 	}
+	task, err := s.Task(id)
+	if err != nil {
+		return err
+	}
+	if err := s.validateMilestoneProject(task.ProjectID, milestoneID); err != nil {
+		return err
+	}
 	var ms any
 	if milestoneID > 0 {
 		ms = milestoneID
 	}
-	_, err := s.DB.Exec(`UPDATE tasks SET title=?, notes=?, priority=?, assignee=?, due_date=?,
+	_, err = s.DB.Exec(`UPDATE tasks SET title=?, notes=?, priority=?, assignee=?, due_date=?,
 		milestone_id=?, updated_at = datetime('now') WHERE id = ?`,
 		title, notes, priority, assignee, dueDate, ms, id)
 	return err
+}
+
+func (s *Store) validateMilestoneProject(projectID, milestoneID int64) error {
+	if milestoneID <= 0 {
+		return nil
+	}
+	var count int
+	if err := s.DB.QueryRow(`SELECT COUNT(*) FROM milestones WHERE id = ? AND project_id = ?`,
+		milestoneID, projectID).Scan(&count); err != nil {
+		return err
+	}
+	if count == 0 {
+		return &ValidationError{Problems: []string{"The selected milestone does not belong to this project"}}
+	}
+	return nil
 }
 
 // SetTaskStatus moves a task on the board, stamping completion when done.

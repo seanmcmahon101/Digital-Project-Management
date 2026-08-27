@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-27
+
 ### Added
 
 - Cross-platform continuous integration and tagged release automation
@@ -38,5 +40,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - PDF reporting and CSV/Excel project-register transfer
 - Local document management and database backups
 
-[Unreleased]: https://github.com/seanmcmahon101/Digital-Project-Management/compare/v1.0...HEAD
+[Unreleased]: https://github.com/seanmcmahon101/Digital-Project-Management/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/seanmcmahon101/Digital-Project-Management/compare/v1.0...v1.1.0
 [1.0.0]: https://github.com/seanmcmahon101/Digital-Project-Management/releases/tag/v1.0
